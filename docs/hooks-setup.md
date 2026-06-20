@@ -94,67 +94,70 @@ You should see a `TASK-<today>-NNNN/` folder with `platform_session_id` and
 
 ## Codex (CLI and VS Code / Cursor / Windsurf extension)
 
-Codex hooks are configured in `~/.codex/config.toml`. The VS Code, Cursor,
-and Windsurf extensions all read the same file.
+Codex hooks are on by default. To disable them you would set `[features] hooks = false` — you don't need to enable them. (The old `codex_hooks = true` flag is a deprecated alias; ignore references to it.)
 
-**⚠️ Important:** Configure hooks in `~/.codex/config.toml` (user-level), not in
-a repo-local `.codex/config.toml`. A confirmed bug in Codex causes repo-local
-hook configuration to be loaded for general project settings but **not** trigger
-hook execution in interactive sessions.
-([openai/codex#17532](https://github.com/openai/codex/issues/17532))
+Hooks load from four locations in priority order:
+1. `~/.codex/hooks.json` — user-level JSON
+2. `~/.codex/config.toml` — user-level TOML
+3. `<repo>/.codex/hooks.json` — project-level JSON (**requires project trust**)
+4. `<repo>/.codex/config.toml` — project-level TOML (**requires project trust**)
 
-**Step 1 — Locate or create the file:**
+**Use user-level config** (`~/.codex/`) for this hook. Project-level hooks require the project to be explicitly trusted and have a confirmed bug where they don't fire in interactive sessions ([openai/codex#17532](https://github.com/openai/codex/issues/17532)).
 
-```bash
-mkdir -p ~/.codex
-touch ~/.codex/config.toml
+**Step 1 — Choose your config format:**
+
+**Option A — `~/.codex/hooks.json` (JSON, mirrors Claude Code's shape):**
+
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /ABSOLUTE/PATH/TO/AI-chat-logs/tools/session_init.py --agent codex",
+            "statusMessage": "Initializing session..."
+          }
+        ]
+      }
+    ]
+  }
+}
 ```
 
-**Step 2 — Add the `SessionStart` hook:**
+**Option B — `~/.codex/config.toml` (TOML):**
 
 ```toml
 [[hooks.SessionStart]]
-matcher = "startup"
+matcher = "startup|resume|clear|compact"
 
 [[hooks.SessionStart.hooks]]
 type = "command"
-command = ["python3", "/ABSOLUTE/PATH/TO/AI-chat-logs/tools/session_init.py", "--agent", "codex"]
-statusMessage = "Initializing session..."
-
-[[hooks.SessionStart]]
-matcher = "resume"
-
-[[hooks.SessionStart.hooks]]
-type = "command"
-command = ["python3", "/ABSOLUTE/PATH/TO/AI-chat-logs/tools/session_init.py", "--agent", "codex"]
-statusMessage = "Initializing session..."
-
-[[hooks.SessionStart]]
-matcher = "clear"
-
-[[hooks.SessionStart.hooks]]
-type = "command"
-command = ["python3", "/ABSOLUTE/PATH/TO/AI-chat-logs/tools/session_init.py", "--agent", "codex"]
+command = "python3 /ABSOLUTE/PATH/TO/AI-chat-logs/tools/session_init.py --agent codex"
 statusMessage = "Initializing session..."
 ```
 
-Replace `/ABSOLUTE/PATH/TO/AI-chat-logs` in all three blocks. To pin a model, append `"--model", "o4-mini"` to each `command` array.
+Replace `/ABSOLUTE/PATH/TO/AI-chat-logs` with the actual path. To pin a model,
+append ` --model o4-mini` to the `command` string.
 
-**Step 3 — Test:**
+**Step 2 — Test:**
 
 Open a new Codex session and check `sessions/` as above.
 
 **The `matcher` field for `SessionStart`:**
 
-The three valid values correspond to the `source` field in the hook payload:
+`matcher` is a pipe-separated string of `source` values from the hook payload:
 - `"startup"` — fresh session (new `codex` invocation)
 - `"resume"` — session resumed via `/resume` or `codex resume <id>`
-- `"clear"` — session reset via `/clear` (new conversation, same process; v0.120.0+)
+- `"clear"` — conversation reset via `/clear` (same process, new thread; v0.120.0+)
+- `"compact"` — session compacted (context summarised, thread continues)
 
-All three are configured above so a Task ID is always assigned. The script's
-idempotency lock handles the case where a session was initialized before a
-resume (if the process didn't restart and `/tmp` state is intact, the resume
-call is a no-op and returns the same Task ID).
+`"startup|resume|clear|compact"` matches all four so a Task ID is always assigned.
+The script's idempotency lock means that on `resume` or `compact`, if the session
+was already initialized in this process's `/tmp` state, the call is a no-op and
+returns the same Task ID.
 
 ---
 
@@ -183,10 +186,21 @@ status: open
 # ... remaining fields at null/empty defaults
 ```
 
-Note: `platform_session_id` is the hook payload's internal `session_id` (a UUID).
-This is NOT the same token as the URL-facing session ID visible in the browser
-address bar. The `platform_url` cannot be auto-constructed from the payload;
-copy it from the browser after the session and update `metadata.yaml`.
+**Platform session IDs:**
+
+- **Codex**: the `session_id` in the hook payload IS Codex's own native session
+  identifier — it's the same ID used internally to identify the session. Recorded
+  as `platform_session_id` and useful for cross-referencing Codex's own logs.
+
+- **Claude Code**: the `session_id` in the hook payload is an internal UUID
+  (e.g. `00893aaf-19fa-41d2-8238-13269b9b3ca0`). This is NOT the token visible
+  in the browser URL (`session_01HFdZEuQc2ckiY9GbSyqb6m`). The URL cannot be
+  reconstructed from the payload — copy it from the browser and fill in
+  `platform_url` in `metadata.yaml` after the session.
+
+In both cases the hook captures whatever `session_id` the platform provides.
+The `TASK-YYYYMMDD-NNNN` exists as a human-readable cross-platform reference
+that works consistently regardless of what the underlying platform sends.
 
 ---
 
@@ -210,13 +224,24 @@ start) and is also the folder name under today's date in `sessions/`.
 ## Manual test without a live session
 
 ```bash
-# Claude Code simulation
-echo '{"session_id": "test-abc-123", "hook_event_name": "UserPromptSubmit", "prompt": "hello"}' | \
-  python3 tools/session_init.py --agent claude --dry-run
+# Claude Code simulation (UserPromptSubmit payload)
+echo '{
+  "session_id": "00893aaf-19fa-41d2-8238-13269b9b3ca0",
+  "hook_event_name": "UserPromptSubmit",
+  "transcript_path": "/Users/you/.claude/projects/.../00893aaf.jsonl",
+  "cwd": "/Users/you/my-project",
+  "prompt": "hello"
+}' | python3 tools/session_init.py --agent claude --dry-run
 
-# Codex simulation
-echo '{"session_id": "test-xyz-789"}' | \
-  python3 tools/session_init.py --agent codex --dry-run
+# Codex simulation (SessionStart payload)
+echo '{
+  "session_id": "codex-session-abc123",
+  "hook_event_name": "SessionStart",
+  "source": "startup",
+  "model": "o4-mini",
+  "transcript_path": null,
+  "cwd": "/Users/you/my-project"
+}' | python3 tools/session_init.py --agent codex --dry-run
 ```
 
 Both print the metadata that would be written and the JSON that would be output
