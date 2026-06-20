@@ -5,10 +5,13 @@ tools/search.py — Search session transcripts indexed in index/sessions.db.
 Usage:
     python tools/search.py "query terms"
     python tools/search.py "query terms" --session TASK-20260620-0001
+    python tools/search.py "query terms" --include-deleted
     python tools/search.py --help
 
 Options:
     --session SESSION_ID    Restrict search to a specific session.
+    --include-deleted       Include sessions that have been tombstoned (deleted from disk).
+                            By default, deleted sessions are excluded from search results.
     --help                  Show this help message and exit.
 
 Prerequisites:
@@ -27,7 +30,7 @@ SNIPPET_TOKENS = 20  # roughly how many words appear in each snippet chunk
 
 
 def parse_args(argv):
-    """Parse CLI arguments. Returns (query, session_id_filter)."""
+    """Parse CLI arguments. Returns (query, session_id_filter, include_deleted)."""
     args = argv[1:]  # drop script name
 
     if not args or "--help" in args or "-h" in args:
@@ -35,6 +38,7 @@ def parse_args(argv):
         sys.exit(0)
 
     session_filter = None
+    include_deleted = False
     remaining = []
     i = 0
     while i < len(args):
@@ -44,6 +48,9 @@ def parse_args(argv):
                 sys.exit(1)
             session_filter = args[i + 1]
             i += 2
+        elif args[i] == "--include-deleted":
+            include_deleted = True
+            i += 1
         else:
             remaining.append(args[i])
             i += 1
@@ -58,7 +65,7 @@ def parse_args(argv):
         print("Error: No query provided.", file=sys.stderr)
         print('Usage: python tools/search.py "query terms"', file=sys.stderr)
         sys.exit(1)
-    return query, session_filter
+    return query, session_filter, include_deleted
 
 
 def check_db():
@@ -72,10 +79,25 @@ def check_db():
         sys.exit(1)
 
 
-def run_search(query, session_filter=None):
+def get_deleted_session_ids(conn):
+    """Return a set of session IDs that have been tombstoned (status = 'deleted')."""
+    try:
+        rows = conn.execute(
+            "SELECT session_id FROM session_meta WHERE status = 'deleted'"
+        ).fetchall()
+        return {row[0] for row in rows}
+    except sqlite3.OperationalError:
+        # session_meta table may not exist in older DBs
+        return set()
+
+
+def run_search(query, session_filter=None, include_deleted=False):
     """
     Query the FTS5 index and return a list of result dicts.
     Each dict has: session_id, date, agent, repo, filename, snippet.
+
+    By default, sessions with status='deleted' in session_meta are excluded.
+    Pass include_deleted=True to include them.
     """
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -110,8 +132,21 @@ def run_search(query, session_filter=None):
         """
         rows = conn.execute(sql, (SNIPPET_TOKENS, query)).fetchall()
 
+    results = [dict(r) for r in rows]
+
+    if not include_deleted:
+        deleted_ids = get_deleted_session_ids(conn)
+        if deleted_ids:
+            filtered = [r for r in results if r["session_id"] not in deleted_ids]
+            excluded_count = len(results) - len(filtered)
+            results = filtered
+            if excluded_count > 0:
+                results = (filtered, excluded_count)
+                conn.close()
+                return results
+
     conn.close()
-    return [dict(r) for r in rows]
+    return results
 
 
 def print_results(results, query, session_filter=None):
@@ -143,11 +178,12 @@ def print_results(results, query, session_filter=None):
 
 
 def main():
-    query, session_filter = parse_args(sys.argv)
+    query, session_filter, include_deleted = parse_args(sys.argv)
     check_db()
 
+    excluded_count = 0
     try:
-        results = run_search(query, session_filter)
+        raw = run_search(query, session_filter, include_deleted)
     except sqlite3.OperationalError as e:
         error_msg = str(e)
         if "no such table" in error_msg:
@@ -167,14 +203,31 @@ def main():
             print(f"Database error: {error_msg}", file=sys.stderr)
             sys.exit(1)
 
+    # run_search may return (results, excluded_count) when some results were filtered
+    if isinstance(raw, tuple):
+        results, excluded_count = raw
+    else:
+        results = raw
+
     if not results:
         if session_filter:
             print(f'No results found for "{query}" in session {session_filter}.')
         else:
             print(f'No results found for "{query}".')
+        if excluded_count > 0:
+            print(
+                f"Note: {excluded_count} result(s) from deleted sessions were excluded. "
+                "Use --include-deleted to include them."
+            )
         sys.exit(0)
 
     print_results(results, query, session_filter)
+
+    if excluded_count > 0:
+        print(
+            f"Note: {excluded_count} result(s) from deleted sessions were excluded. "
+            "Use --include-deleted to include them."
+        )
 
 
 if __name__ == "__main__":

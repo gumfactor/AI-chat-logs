@@ -24,7 +24,7 @@ python tools/index.py
 Done. 1 session(s), 2 file(s) indexed into /path/to/AI-chat-logs/index/sessions.db
 ```
 
-**Re-running is safe.** The indexer upserts session rows on each run, so running it multiple times produces no duplicates. It also purges rows for any session folders that have been deleted from disk, printing `[purged] TASK-ID` for each one removed. Run it after every new session commit.
+**Re-running is safe.** The indexer upserts session rows on each run, so running it multiple times produces no duplicates. When a session folder is deleted from disk, the indexer **tombstones** it instead of deleting rows: it sets `status = 'deleted'` in `session_meta` and prints `[tombstoned] TASK-ID (folder no longer exists)`. The transcript content is preserved in the FTS index. Run it after every new session commit.
 
 ---
 
@@ -42,6 +42,9 @@ python tools/search.py "authentication flow"
 
 # Search within a specific session
 python tools/search.py "audit" --session TASK-20260620-0001
+
+# Include tombstoned (deleted) sessions in results
+python tools/search.py "authentication flow" --include-deleted
 
 # Show help
 python tools/search.py --help
@@ -67,6 +70,8 @@ Search results for: "audit"  [session: TASK-20260620-0001]
     File     : transcript.md
     Context  : ...This makes every merged PR a navigable >>>audit<<< record.
 ```
+
+**Deleted sessions are excluded by default.** When sessions are tombstoned by the indexer (their folder was removed from disk), they are excluded from search results. Pass `--include-deleted` to include them. When results are excluded, a note is printed suggesting the flag.
 
 **If the index does not exist**, the script prints a helpful error:
 
@@ -166,10 +171,16 @@ python tools/dag.py --root TASK-20260620-0041
 # Write output to a file instead of stdout
 python tools/dag.py --output /tmp/dag.md
 
-# Append diagram to a session's summary.md
+# Append diagram to a session's summary.md (idempotent: skips if already present)
 python tools/dag.py --root TASK-20260620-0041 \
     --append-to sessions/2026/2026-06-20/TASK-20260620-0041/summary.md
+
+# Replace an existing DAG section in the file
+python tools/dag.py --root TASK-20260620-0041 \
+    --append-to sessions/2026/2026-06-20/TASK-20260620-0041/summary.md --force
 ```
+
+**`--force` with `--append-to`:** If the file already contains a `<!-- dag:generated -->` marker, `--append-to` skips writing and prints "DAG section already present. Use --force to replace." Pass `--force` to replace the existing section instead of skipping. The marker appears exactly once in the output regardless of how many times the command is run.
 
 **Sample output:**
 
@@ -207,6 +218,9 @@ Creates a `summary.md` from the standard blank template (if it doesn't exist yet
 
 ```bash
 python tools/generate_summary.py TASK-20260620-0041
+
+# Replace an existing DAG section (e.g. after new subagents are added mid-task)
+python tools/generate_summary.py TASK-20260620-0041 --force
 ```
 
 **What it does:**
@@ -215,6 +229,7 @@ python tools/generate_summary.py TASK-20260620-0041
 2. If `summary.md` does not exist: creates it from the standard blank template and appends the Mermaid DAG section.
 3. If `summary.md` already exists and does not contain the DAG marker: appends the DAG section.
 4. If `summary.md` already exists and already contains the DAG marker: prints "DAG section already present. Nothing to do." and exits 0.
+5. With `--force`: replaces the existing DAG section instead of skipping (useful when new subagents are added mid-task).
 
 This is the "auto-generate the Mermaid diagram as part of `summary.md` once the task closes" behaviour described in Phase 5 of `Plan.md`.
 

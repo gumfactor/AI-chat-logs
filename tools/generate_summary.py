@@ -4,12 +4,17 @@ tools/generate_summary.py — Create or update a session's summary.md with a Mer
 
 Usage:
     python tools/generate_summary.py TASK-20260620-0041
+    python tools/generate_summary.py TASK-20260620-0041 --force
 
 If summary.md does not exist, creates it from the standard blank template and
 appends a Mermaid DAG section at the bottom.
 
 If summary.md already exists, appends the DAG section only if it isn't already
 present (idempotent — safe to run multiple times).
+
+If summary.md already exists and already has a DAG section, the second run
+prints "DAG section already present" and exits 0. Pass --force to replace the
+existing DAG section instead (useful when new subagents are added mid-task).
 
 The DAG section shows the full session tree rooted at the given session ID,
 using the same logic as `tools/dag.py --root TASK-ID`.
@@ -140,6 +145,21 @@ def main():
         print(__doc__.strip())
         sys.exit(0)
 
+    # Parse --force flag
+    force = False
+    remaining = []
+    for arg in argv:
+        if arg == "--force":
+            force = True
+        else:
+            remaining.append(arg)
+    argv = remaining
+
+    if not argv:
+        print("Error: task ID is required.", file=sys.stderr)
+        print("Usage: python tools/generate_summary.py TASK-YYYYMMDD-NNNN", file=sys.stderr)
+        sys.exit(1)
+
     task_id = argv[0].strip()
     if not task_id:
         print("Error: task ID is required.", file=sys.stderr)
@@ -184,7 +204,32 @@ def main():
         existing = f.read()
 
     if DAG_SECTION_MARKER in existing:
-        print(f"DAG section already present in {summary_path}. Nothing to do.")
+        if not force:
+            print(f"DAG section already present in {summary_path}. Nothing to do.")
+            print("Use --force to replace the existing DAG section.")
+            return
+        # --force: replace the existing DAG section
+        # Find the marker position and remove everything from it to the end of the
+        # DAG block. The block ends at the next '---' separator or end of file.
+        marker_pos = existing.index(DAG_SECTION_MARKER)
+        # Walk back to include the section header if it immediately precedes the marker
+        # (i.e. "## Session DAG\n\n<!-- dag:generated -->")
+        before_marker = existing[:marker_pos]
+        # Strip trailing whitespace to get a clean cut point
+        before = before_marker.rstrip()
+        # Remove the trailing section header line if present
+        if before.endswith(DAG_SECTION_HEADER):
+            before = before[: -len(DAG_SECTION_HEADER)].rstrip()
+        # Also strip the separator that preceded the section header, so we
+        # don't accumulate extra '---' lines on repeated --force runs.
+        if before.endswith("---"):
+            before = before[:-3].rstrip()
+
+        # Everything from marker_pos to end is replaced by the new dag_section
+        new_content = before + "\n\n---\n\n" + dag_section
+        with open(summary_path, "w", encoding="utf-8") as f:
+            f.write(new_content)
+        print(f"Replaced DAG section in: {summary_path}")
         return
 
     # Append the DAG section

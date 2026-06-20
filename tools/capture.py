@@ -388,7 +388,12 @@ Examples:
             capture_output=False,
         )
         if result.returncode != 0:
-            print("Warning: indexer exited with a non-zero status.", file=sys.stderr)
+            print(
+                f"Warning: indexer exited with status {result.returncode}. "
+                "Session folder was created successfully.",
+                file=sys.stderr,
+            )
+            return 2
 
     return 0
 

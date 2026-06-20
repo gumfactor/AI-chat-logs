@@ -259,7 +259,7 @@ def main():
         total_files += file_count
         live_session_ids.add(meta["session_id"])
 
-    # Remove DB rows for sessions that no longer exist on disk
+    # Tombstone sessions that no longer exist on disk (preserve rows, mark deleted)
     if live_session_ids:
         stale_ids = [
             row[0]
@@ -267,16 +267,13 @@ def main():
             if row[0] not in live_session_ids
         ]
         if stale_ids:
-            placeholders = ",".join("?" * len(stale_ids))
-            conn.execute(
-                f"DELETE FROM transcripts WHERE session_id IN ({placeholders})", stale_ids
-            )
-            conn.execute(
-                f"DELETE FROM session_meta WHERE session_id IN ({placeholders})", stale_ids
-            )
-            conn.commit()
             for sid in stale_ids:
-                print(f"[purged] {sid} (folder no longer exists)")
+                conn.execute(
+                    "UPDATE session_meta SET status = 'deleted' WHERE session_id = ?",
+                    (sid,),
+                )
+                print(f"[tombstoned] {sid} (folder no longer exists)")
+            conn.commit()
 
     conn.close()
 

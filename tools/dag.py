@@ -16,9 +16,13 @@ Usage:
     # Write output to a file instead of stdout
     python tools/dag.py --output /tmp/dag.md
 
-    # Append diagram to a session's summary.md
+    # Append diagram to a session's summary.md (idempotent: skips if already present)
     python tools/dag.py --root TASK-20260620-0041 \\
         --append-to sessions/2026/2026-06-20/TASK-20260620-0041/summary.md
+
+    # Replace an existing DAG section in the file
+    python tools/dag.py --root TASK-20260620-0041 \\
+        --append-to sessions/2026/2026-06-20/TASK-20260620-0041/summary.md --force
 """
 
 import os
@@ -343,6 +347,9 @@ def format_mermaid_block(lines):
 # CLI
 # ---------------------------------------------------------------------------
 
+DAG_SECTION_MARKER = "<!-- dag:generated -->"
+
+
 def parse_args(argv):
     """Parse CLI arguments manually (no argparse dependency)."""
     args = argv[1:]
@@ -350,6 +357,7 @@ def parse_args(argv):
     root = None
     output = None
     append_to = None
+    force = False
 
     i = 0
     while i < len(args):
@@ -375,15 +383,18 @@ def parse_args(argv):
                 sys.exit(1)
             append_to = args[i + 1]
             i += 2
+        elif arg == "--force":
+            force = True
+            i += 1
         else:
             print(f"Error: unknown argument: {arg}", file=sys.stderr)
             sys.exit(1)
 
-    return root, output, append_to
+    return root, output, append_to, force
 
 
 def main():
-    root_id, output_path, append_to_path = parse_args(sys.argv)
+    root_id, output_path, append_to_path, force = parse_args(sys.argv)
 
     # Load all sessions and build the graph
     sessions, children, parents = build_graph(SESSIONS_DIR)
@@ -463,24 +474,50 @@ def main():
             f.write(diagram + "\n")
         print(f"Written to {output_path}")
     elif append_to_path:
-        _append_dag_to_file(append_to_path, diagram)
+        _append_dag_to_file(append_to_path, diagram, force=force)
     else:
         print(diagram)
 
 
-def _append_dag_to_file(file_path, content):
-    """Append content to a file, creating it if it doesn't exist."""
+def _append_dag_to_file(file_path, content, force=False):
+    """
+    Append content to a file, creating it if it doesn't exist.
+
+    Idempotent: if the file already contains the DAG_SECTION_MARKER, skip
+    appending unless force=True, in which case the existing DAG section
+    (from the marker to the end of the file) is replaced.
+    """
     abs_path = file_path if os.path.isabs(file_path) else os.path.join(REPO_ROOT, file_path)
 
     if not os.path.exists(abs_path):
         # Create parent directories if needed
         os.makedirs(os.path.dirname(abs_path), exist_ok=True)
         with open(abs_path, "w", encoding="utf-8") as f:
-            f.write(content + "\n")
+            f.write(DAG_SECTION_MARKER + "\n" + content + "\n")
         print(f"Created and wrote DAG to {abs_path}")
+        return
+
+    with open(abs_path, "r", encoding="utf-8") as f:
+        existing = f.read()
+
+    if DAG_SECTION_MARKER in existing:
+        if not force:
+            print(
+                f"DAG section already present in {abs_path}. "
+                "Use --force to replace."
+            )
+            return
+        # --force: replace existing DAG section (from marker to end of file)
+        marker_pos = existing.index(DAG_SECTION_MARKER)
+        # Keep everything before the marker (strip trailing whitespace)
+        before = existing[:marker_pos].rstrip()
+        new_content = before + "\n\n" + DAG_SECTION_MARKER + "\n" + content + "\n"
+        with open(abs_path, "w", encoding="utf-8") as f:
+            f.write(new_content)
+        print(f"Replaced DAG section in {abs_path}")
     else:
         with open(abs_path, "a", encoding="utf-8") as f:
-            f.write("\n" + content + "\n")
+            f.write("\n" + DAG_SECTION_MARKER + "\n" + content + "\n")
         print(f"Appended DAG to {abs_path}")
 
 
