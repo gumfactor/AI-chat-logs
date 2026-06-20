@@ -13,6 +13,7 @@ Generated during Phase 1 implementation (2026-06-20).
 **Supervisor recommendation:** Option B (separate files). Plan.md states "Transcripts are immutable after commit" — this is only enforceable if transcript and summary are separate files. A combined file would require editing the transcript section to add the summary, violating immutability.
 
 **Decision needed from you:** Confirm Option B, or override. Once confirmed, `templates/session.md` will be split into `templates/transcript.md` and `templates/summary.md`.
+**Matt's Decision:** Confirmed Option B.
 
 ---
 
@@ -31,6 +32,7 @@ Generated during Phase 1 implementation (2026-06-20).
 - `commits` — SHA(s) from the initial repo setup were not recorded
 
 **Action needed:** If you have access to the original ChatGPT conversation, the URL and model version can be retrieved. Otherwise, these remain as null/unknown.
+**Matt'Decision:** URL should not be required, as this will rarely resolve; ID/Ref# are sufficient. Same with timestamp and model if those will not ever resolve (though it would be much better if they could).
 
 ---
 
@@ -47,6 +49,7 @@ Generated during Phase 1 implementation (2026-06-20).
 **Supervisor recommendation:** Keep it as Plan.md specifies — one `.md` file per agent role, named descriptively (`orchestrator.md`, `research-agent.md`, `coder-agent.md`). Single-agent sessions use `transcript.md`. The `summary.md` is always separate (see Q1).
 
 **Decision needed from you:** Are you running multi-agent sessions yet? If yes, confirm the layout and it will be added to templates.
+**Matt's Decision:** Yes, I'm running multi-agent sessions - often supervisor/delegate structures. So connections between these agents will need to be identifiable/auditable through the files/file structure.
 
 ---
 
@@ -61,6 +64,7 @@ Generated during Phase 1 implementation (2026-06-20).
 **Supervisor recommendation:** Option A — create it now. The board is cheap to set up and immediately useful for tracking the Phase 3 and Phase 4 tasks.
 
 **Decision needed from you:** Follow the setup guide at `docs/github-project-board.md` to create the board manually. No further file changes are needed in this repo once it exists.
+**Matt's Decision:** Defer for now.
 
 ---
 
@@ -76,6 +80,7 @@ Generated during Phase 1 implementation (2026-06-20).
 **Supervisor recommendation:** Option A for now (you have few project repos), with Option C as the Phase 4 upgrade when the system is stable.
 
 **Decision needed from you:** How many project repos do you currently use agents on? If it's more than 2–3, Option B or C becomes worth the setup cost now.
+**Matt's Decision:** I have a .dotfiles repo set up to hold skills that should be auto inherited across repos. Particulary in the .Claude and .Agents folders. This hasn't yet been turned into a template, but it probably should be.
 
 ---
 
@@ -93,6 +98,7 @@ Generated during Phase 1 implementation (2026-06-20).
 **Supervisor recommendation:** Option A is correct for test/scratch sessions. Option B is worth considering if you ever intentionally delete a real session folder (e.g., to remove sensitive content), since you'd want a record that it existed.
 
 **Decision needed from you:** Are you likely to intentionally delete committed session folders? If no, Option A is fine as-is.
+**Matt's Decision:** Preserve everything.
 
 ---
 
@@ -108,6 +114,7 @@ Generated during Phase 1 implementation (2026-06-20).
 **Supervisor recommendation:** Option A is correct for interactive use. Option B or C is better if you plan to use `capture.py` in CI or automation scripts.
 
 **Decision needed from you:** Will you use `--index` in automated scripts that check exit codes?
+**Matt's Decision:** Yes, I may use --index in automated scripts.
 
 ---
 
@@ -125,6 +132,7 @@ Generated during Phase 1 implementation (2026-06-20).
 **Supervisor recommendation:** Option A is fine for now. `generate_summary.py` is the recommended entry point; `--append-to` is a power-user escape hatch. The README already documents the distinction.
 
 **Decision needed from you:** Are you likely to call `dag.py --append-to` directly in scripts? If yes, Option B is safer.
+**Matt's Decision:** Option B is safer.
 
 ---
 
@@ -140,3 +148,4 @@ Generated during Phase 1 implementation (2026-06-20).
 **Supervisor recommendation:** Option B — add `--force` as an explicit opt-in. The current default protects against accidental overwrites in a no-op run; `--force` provides an escape hatch for intentional regeneration.
 
 **Decision needed from you:** Will session graphs change after initial `summary.md` generation (i.e., do you add subagents to an in-progress session mid-task)? If yes, Option B or C is needed.
+**Matt's Decision:** Option B
