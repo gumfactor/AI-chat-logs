@@ -112,6 +112,26 @@ def ensure_unique_task_id(task_id: str, session_folder: str) -> str:
 # File writers
 # ---------------------------------------------------------------------------
 
+def yaml_str(val: str, fallback: str = "null") -> str:
+    """
+    Return a YAML-safe representation of a user-supplied string value.
+
+    - Empty / None  → fallback (default "null")
+    - Non-empty     → double-quoted string with internal double-quotes and
+                      backslashes escaped.
+
+    Quoting prevents two classes of silent corruption:
+      1. Values containing colons (e.g. model names like "llama3:8b") which
+         YAML would mis-parse as key–value separators.
+      2. Reserved bare-word scalars (true, false, null, yes, no, on, off) that
+         YAML would parse as the wrong type.
+    """
+    if not val:
+        return fallback
+    escaped = val.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
 def write_transcript(folder: str, task_id: str, agent: str, model: str,
                      date: str, repo: str, platform_url: str, content: str):
     """Write transcript.md into folder."""
@@ -147,10 +167,12 @@ def write_metadata(folder: str, task_id: str, agent: str, model: str,
 
     now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    agent_val = agent if agent else "null"
-    model_val = model if model else "null"
-    repo_val = repo if repo else "null"
-    platform_val = platform_url if platform_url else "null"
+    # Use yaml_str() for all user-supplied values so that colons, YAML
+    # reserved words, and other special characters never corrupt the file.
+    agent_val = yaml_str(agent)
+    model_val = yaml_str(model)
+    repo_val = yaml_str(repo)
+    platform_val = yaml_str(platform_url)
     branch_val = f"agent/{task_id}-description"  # placeholder; user should update
 
     content = f"""session_id: {task_id}

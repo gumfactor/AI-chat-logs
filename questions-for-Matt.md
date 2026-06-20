@@ -93,3 +93,18 @@ Generated during Phase 1 implementation (2026-06-20).
 **Supervisor recommendation:** Option A is correct for test/scratch sessions. Option B is worth considering if you ever intentionally delete a real session folder (e.g., to remove sensitive content), since you'd want a record that it existed.
 
 **Decision needed from you:** Are you likely to intentionally delete committed session folders? If no, Option A is fine as-is.
+
+---
+
+## 9. `capture.py` — indexer failure exit code behavior — **[NEEDS YOUR INPUT]**
+
+**Issue:** When `--index` is used and `tools/index.py` exits non-zero, `capture.py` prints a warning to stderr but still exits 0. The session was captured successfully, so success is arguably correct. But if you run this in a script that checks exit codes, a broken indexer will go undetected.
+
+**Options considered:**
+- A) Current behavior: exit 0 even when the indexer fails. The capture succeeded; the index can be rebuilt manually.
+- B) Exit 1 (same as indexer) when `--index` is used and indexer fails. More strict; better for scripting.
+- C) Exit 2 (distinct code) to signal "captured OK but index failed." Allows callers to distinguish "capture failed" from "index failed."
+
+**Supervisor recommendation:** Option A is correct for interactive use. Option B or C is better if you plan to use `capture.py` in CI or automation scripts.
+
+**Decision needed from you:** Will you use `--index` in automated scripts that check exit codes?

@@ -4,6 +4,11 @@ Tracks structural changes to this system: folder conventions, metadata schema up
 
 ---
 
+## 2026-06-20 — Phase 4: Semi-automatic capture
+
+- Added `tools/capture.py` — CLI capture tool; reads transcript from `--file` or stdin; auto-generates next `TASK-YYYYMMDD-NNNN` ID by scanning existing session folders; creates `sessions/YYYY/YYYY-MM-DD/TASK-ID/` with `transcript.md`, `metadata.yaml`, and blank `summary.md`; `--index` flag triggers the indexer post-capture; exits non-zero with error message on empty transcript.
+- Updated `tools/README.md` — added `capture.py` section with full usage reference.
+
 ## 2026-06-20 — Phase 3: Searchable index tooling
 
 - Added `tools/index.py` — SQLite FTS5 indexer; walks `sessions/` recursively; reads `metadata.yaml` per session; upserts `.md` files into `transcripts` (FTS5) and `session_meta` (relational) tables in `index/sessions.db`. Upsert strategy: delete-then-insert per session, so re-runs are idempotent.

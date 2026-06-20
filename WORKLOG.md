@@ -4,6 +4,24 @@ Running log of work done on this system. Most recent entry first.
 
 ---
 
+## 2026-06-20 — Phase 4: Semi-Automatic Capture
+
+Built `tools/capture.py` — a CLI script that creates the full session folder structure from a raw transcript (file or stdin), eliminating the manual folder-creation and template-copying steps.
+
+- Created `tools/capture.py` — reads a transcript from `--file` or stdin; generates the next available `TASK-YYYYMMDD-NNNN` ID for today; creates `sessions/YYYY/YYYY-MM-DD/TASK-ID/`; writes `transcript.md` (with header block), `metadata.yaml` (all known fields filled, unknowns set to `null`), and a blank `summary.md` template. Optional `--index` flag runs the indexer automatically. Handles: missing sessions/ dir, ID increment from existing sessions, empty transcript error, collision guard.
+- Updated `tools/README.md` — added full `capture.py` section with usage examples, options table, sample output, and post-capture workflow.
+
+All tests passed:
+1. Basic capture from file — session folder created, all three files present, metadata.yaml valid YAML, summary.md is blank template.
+2. Task ID increment — second capture on same date produced NNNN+1 (0003 after 0002).
+3. Empty transcript — exited with clear error message, no folder created.
+4. Stdin mode (`echo "..." | python tools/capture.py`) — worked correctly.
+5. `--index` flag — indexer ran automatically after capture, printed session count.
+
+Phase 4 acceptance criterion: a session can be captured in under 60 seconds with no manual text copying. Criterion met — one command with `--file` or a pipe from stdin.
+
+---
+
 ## 2026-06-20 — Phase 3: Searchable Index
 
 Built the SQLite FTS5 search tooling so all captured transcripts are queryable by keyword, topic, or session.
