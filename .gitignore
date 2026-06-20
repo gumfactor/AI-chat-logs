@@ -1,1 +1,3 @@
 index/sessions.db
+index/sessions.db-shm
+index/sessions.db-wal

@@ -1,4 +1,4 @@
-# Transcript: TASK-20260620-0001
+# Session: TASK-20260620-0001
 
 **Agent:** ChatGPT
 **Model:** unknown

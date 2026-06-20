@@ -1,7 +1,7 @@
 session_id: TASK-20260620-0001
 platform_url: https://chatgpt.com/c/unknown  # platform URL not recorded; replace when known
-timestamp_start: 2026-06-20T00:00:00Z        # exact time not recorded
-timestamp_end: 2026-06-20T00:00:00Z          # exact time not recorded
+timestamp_start: null                         # exact time not recorded
+timestamp_end: null                           # exact time not recorded
 repo: gumfactor/AI-chat-logs
 branch: main                                  # genesis conversation; no agent branch
 parent_session: null
@@ -16,7 +16,7 @@ files_touched:
   - README.md
   - WORKLOG.md
   - CHANGELOG.md
-commits: []                                  # initial repo setup; SHA not recorded
+commits: []                                  # SHA not recorded; genesis session predates this system — acknowledged data loss
 prs: []
 issues: []
 status: merged
