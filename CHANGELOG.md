@@ -4,6 +4,13 @@ Tracks structural changes to this system: folder conventions, metadata schema up
 
 ---
 
+## 2026-06-20 — Phase 3: Searchable index tooling
+
+- Added `tools/index.py` — SQLite FTS5 indexer; walks `sessions/` recursively; reads `metadata.yaml` per session; upserts `.md` files into `transcripts` (FTS5) and `session_meta` (relational) tables in `index/sessions.db`. Upsert strategy: delete-then-insert per session, so re-runs are idempotent.
+- Added `tools/search.py` — FTS5 search CLI; prints session ID, date, agent, repo, filename, and context snippet per match; supports `--session` filter; prints helpful error if index is missing; supports `--help`.
+- Added `tools/README.md` — usage documentation for both scripts; prerequisites, examples, re-run guidance.
+- Removed `tools/.gitkeep` — replaced by real files.
+
 ## 2026-06-20 — Phase 2: GitHub integration files
 
 - Added `.github/PULL_REQUEST_TEMPLATE.md` — GitHub-native PR template; auto-populates PR body with Task ID, transcript link, platform URL, agent/model, files changed, testing info, uncertainties, and follow-up tasks

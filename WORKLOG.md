@@ -4,6 +4,27 @@ Running log of work done on this system. Most recent entry first.
 
 ---
 
+## 2026-06-20 — Phase 3: Searchable Index
+
+Built the SQLite FTS5 search tooling so all captured transcripts are queryable by keyword, topic, or session.
+
+- Created `tools/index.py` — walks `sessions/` recursively; reads each session's `metadata.yaml`; upserts all `.md` files into two SQLite tables: `transcripts` (FTS5 full-text) and `session_meta` (structured metadata). Idempotent: safe to re-run after every commit. Prints one `[indexed]` line per session.
+- Created `tools/search.py` — queries the FTS5 index and prints session ID, date, agent, repo, filename, and a context snippet (~200 chars) for each match. Supports `--session` filter to restrict search to a specific session. Prints a clear error if the index has not been built yet.
+- Created `tools/README.md` — documents both scripts: what they do, prerequisites (Python 3 standard library only), usage examples, and re-run guidance.
+- Removed `tools/.gitkeep` placeholder (now that real files live in `tools/`).
+
+All tests passed:
+1. `python tools/index.py` — completed, printed `[indexed] TASK-20260620-0001 (2 files)`.
+2. `python tools/search.py "audit"` — returned 2 matching results with snippets.
+3. `python tools/search.py "nonexistent_term_xyz"` — printed "No results found."
+4. `python tools/search.py "audit" --session TASK-20260620-0001` — filtered results correctly.
+5. Missing-db error — printed helpful message directing user to run index.py first.
+6. Idempotency — running indexer twice produces exactly 2 transcript rows and 1 metadata row (no duplicates).
+
+Phase 3 acceptance criterion: `python tools/search.py "auth flow"` returns all sessions that discussed authentication. Verified.
+
+---
+
 ## 2026-06-20 — Phase 2: GitHub Integration
 
 Linked every conversation to the GitHub work it produces.
