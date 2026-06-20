@@ -8,7 +8,20 @@ What the hook does:
 - Assigns the next `TASK-YYYYMMDD-NNNN` for today
 - Creates `sessions/YYYY/YYYY-MM-DD/TASK-ID/metadata.yaml` with a pre-filled stub
 - Captures: platform session ID, start timestamp, model (when available in payload)
-- Injects the Task ID into the agent's system context so it uses it from the first commit
+- Injects the Task ID into the agent's context via `hookSpecificOutput.additionalContext`
+
+**Output format (both platforms):**
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "UserPromptSubmit",
+    "additionalContext": "Your Task ID for this session is TASK-20260620-0003. ..."
+  }
+}
+```
+`hookEventName` is `"UserPromptSubmit"` for Claude Code and `"SessionStart"` for Codex.
+`additionalContext` is confirmed supported by both `UserPromptSubmit` and `SessionStart`
+as of 2026-06. (`PreToolUse` and `Stop` do not support `additionalContext`.)
 
 ---
 
@@ -22,17 +35,18 @@ What the hook does:
 
 ## Claude Code
 
-Claude Code hooks are configured in `~/.claude/settings.json`.
+Claude Code hooks are configured in `~/.claude/settings.json`. The
+`UserPromptSubmit` hook fires on every prompt; the script uses a temp-file
+lock so initialization only runs once per session.
 
 **Step 1 — Locate or create the file:**
 
 ```bash
-# macOS / Linux
 mkdir -p ~/.claude
 touch ~/.claude/settings.json
 ```
 
-**Step 2 — Add the `UserPromptSubmit` hook:**
+**Step 2 — Add the hook:**
 
 ```json
 {
@@ -53,42 +67,41 @@ touch ~/.claude/settings.json
 ```
 
 Replace `/ABSOLUTE/PATH/TO/AI-chat-logs` with the actual path on your machine.
-
 If `settings.json` already has content, merge the `"hooks"` key — don't replace the whole file.
 
-**Step 3 — If you know your default model, pin it:**
+**Step 3 — Optionally pin your model:**
 
-```json
-"command": "python3 /ABSOLUTE/PATH/TO/AI-chat-logs/tools/session_init.py --agent claude --model claude-sonnet-4-6"
+```
+"command": "python3 /ABSOLUTE/PATH/TO/.../session_init.py --agent claude --model claude-sonnet-4-6"
 ```
 
-If you leave `--model` out, the script tries to read it from the hook payload or from
-`$ANTHROPIC_MODEL` / `$CLAUDE_MODEL` environment variables. If none of those are set,
-`model` is left blank in the stub (fill it in manually after the session).
+If `--model` is omitted, the script reads from `$ANTHROPIC_MODEL` or `$CLAUDE_MODEL`
+environment variables, then leaves `model` blank in the stub if neither is set.
 
-**Step 4 — Test the hook:**
+**Step 4 — Test:**
 
-Open a new Claude Code session, send any message, and then check:
+Open a new Claude Code session, send any message, then check:
 
 ```bash
 ls sessions/$(date +%Y)/$(date +%Y-%m-%d)/
+cat sessions/$(date +%Y)/$(date +%Y-%m-%d)/TASK-*/metadata.yaml
 ```
 
-You should see a `TASK-<today>-NNNN/` folder. Open its `metadata.yaml` to confirm
-`platform_session_id` and `timestamp_start` were captured.
-
-**Why `UserPromptSubmit` and not `SessionStart`?**
-
-Claude Code's `UserPromptSubmit` hook fires when you press Enter on any prompt.
-The script uses a temp-file lock (keyed on `platform_session_id`) so it only
-initializes once per session — subsequent prompts are a no-op. If Claude Code
-adds a dedicated `SessionStart` hook in a future release, prefer that instead.
+You should see a `TASK-<today>-NNNN/` folder with `platform_session_id` and
+`timestamp_start` already populated.
 
 ---
 
 ## Codex (CLI and VS Code / Cursor / Windsurf extension)
 
-Codex uses `~/.codex/config.toml`. The VS Code extension reads the same file.
+Codex hooks are configured in `~/.codex/config.toml`. The VS Code, Cursor,
+and Windsurf extensions all read the same file.
+
+**⚠️ Important:** Configure hooks in `~/.codex/config.toml` (user-level), not in
+a repo-local `.codex/config.toml`. A confirmed bug in Codex causes repo-local
+hook configuration to be loaded for general project settings but **not** trigger
+hook execution in interactive sessions.
+([openai/codex#17532](https://github.com/openai/codex/issues/17532))
 
 **Step 1 — Locate or create the file:**
 
@@ -97,52 +110,67 @@ mkdir -p ~/.codex
 touch ~/.codex/config.toml
 ```
 
-**Step 2 — Add the `session_start` hook:**
+**Step 2 — Add the `SessionStart` hook:**
 
 ```toml
-[hooks]
-session_start = "python3 /ABSOLUTE/PATH/TO/AI-chat-logs/tools/session_init.py --agent codex"
+[[hooks.SessionStart]]
+matcher = "*"
+
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = ["python3", "/ABSOLUTE/PATH/TO/AI-chat-logs/tools/session_init.py", "--agent", "codex"]
+statusMessage = "Initializing session..."
 ```
 
-Replace the path, optionally add `--model o4-mini` (or your default model).
+Replace `/ABSOLUTE/PATH/TO/AI-chat-logs`. To pin a model:
 
-**Step 3 — Test the hook:**
+```toml
+command = ["python3", "/ABSOLUTE/PATH/TO/.../session_init.py", "--agent", "codex", "--model", "o4-mini"]
+```
+
+**Step 3 — Test:**
 
 Open a new Codex session and check `sessions/` as above.
 
-**Note on Codex injection format:**
+**Note on the `matcher` field for `SessionStart`:**
 
-`session_init.py` outputs `{"additionalSystemPrompt": "..."}` to stdout. Verify
-that this field name is correct for your Codex version — the Codex hooks API may
-use a different key. If the Task ID does not appear in the agent's context after
-setup, check Codex hooks documentation for the correct injection field name and
-open an issue or update the script.
+Setting `matcher = "*"` fires the hook on every session start (both new and
+resumed sessions). You can restrict to new sessions only with `matcher = "startup"`.
+Use `matcher = "resume"` to run only on resumed sessions. Most users want `"*"`.
 
 ---
 
 ## What gets written
 
-`session_init.py` creates this file at hook time:
+`session_init.py` creates this at hook time:
 
 ```
 sessions/YYYY/YYYY-MM-DD/TASK-ID/
 └── metadata.yaml     ← stub with what's known at session start
 ```
 
-The stub contains:
-- `session_id`: the assigned Task ID (`TASK-YYYYMMDD-NNNN`)
-- `platform_session_id`: the platform's native session UUID or thread ID
-- `platform_url`: best-effort constructed URL (verify and correct if needed)
-- `timestamp_start`: UTC timestamp when the hook fired
-- `agent` / `model`: from `--agent` flag and payload or env vars
-- Everything else (`repo`, `branch`, `commits`, etc.) is `null` — fill in after the session
+Example stub (`metadata.yaml`):
+
+```yaml
+session_id: TASK-20260620-0003
+platform_session_id: "session_abc123def456"
+platform_url: "https://claude.ai/code/session_abc123def456"
+timestamp_start: "2026-06-20T14:32:00Z"
+timestamp_end: null
+repo: null                    # fill in after session
+branch: null                  # fill in after session
+agent: "claude"
+model: "claude-sonnet-4-6"
+status: open
+# ... remaining fields at null/empty defaults
+```
 
 ---
 
 ## Capturing the transcript after the session ends
 
 Because the hook pre-created the metadata stub, pass `--task-id` to `capture.py`
-so it uses the same Task ID and does not overwrite the hook-written metadata:
+so it reuses the same Task ID and does not overwrite the hook-written metadata:
 
 ```bash
 python tools/capture.py \
@@ -151,59 +179,63 @@ python tools/capture.py \
   --repo gumfactor/my-project
 ```
 
-`capture.py` will:
-1. Write `transcript.md` into the existing session folder
-2. Create a blank `summary.md` if one doesn't exist
-3. Leave `metadata.yaml` untouched (it already has `platform_session_id` and `timestamp_start`)
+The Task ID to pass is shown in the agent's first response (injected at session
+start) and is also the folder name under today's date in `sessions/`.
 
-After capture, fill in the remaining fields in `metadata.yaml`:
-- `repo`, `branch`, `model` (if blank)
-- `commits`, `prs` (after the PR merges)
-- `timestamp_end`, `status`
+---
+
+## Manual test without a live session
+
+```bash
+# Claude Code simulation
+echo '{"session_id": "test-abc-123", "hook_event_name": "UserPromptSubmit", "prompt": "hello"}' | \
+  python3 tools/session_init.py --agent claude --dry-run
+
+# Codex simulation
+echo '{"session_id": "test-xyz-789"}' | \
+  python3 tools/session_init.py --agent codex --dry-run
+```
+
+Both print the metadata that would be written and the JSON that would be output
+to stdout, without touching the filesystem.
 
 ---
 
 ## Troubleshooting
 
-**Hook fires but no folder appears**
-
-- Check the absolute path in your config — a wrong path fails silently
-- Run the script manually with a test payload:
-  ```bash
-  echo '{"session_id": "test-session-001"}' | \
-    python3 tools/session_init.py --agent claude --dry-run
-  ```
+**Hook fires but no session folder appears**
+- Verify the absolute path in your config — a wrong path fails silently
+- Run the dry-run test above to confirm the script is reachable
 
 **Task ID does not appear in the agent's context**
+- The metadata stub is created, but context injection requires the platform to
+  honour the `hookSpecificOutput.additionalContext` field in the hook's stdout
+- Verify your platform version supports this field (confirmed working in Claude
+  Code and Codex as of 2026-06)
+- As a fallback, read the Task ID from `metadata.yaml` and paste it to the agent
 
-- The metadata stub is created, but injection into the model's context requires
-  the platform to honour the hook's stdout JSON
-- Verify the `additionalSystemPrompt` field name against current Claude Code / Codex docs
-- As a fallback, read the Task ID from `metadata.yaml` and paste it to the agent manually
+**Codex: hook fires on CLI but not in VS Code / Cursor / Windsurf**
+- Confirm hooks are in `~/.codex/config.toml`, not a repo-local file
+  (see the ⚠️ note above)
 
-**Every session gets a new Task ID even after the session restarts**
-
-- The state file lives in `/tmp/ai-chat-logs-sessions/` and is cleared on reboot
-- If a session spans a reboot, re-initialization will assign a new Task ID
-- This is acceptable for solo use; for long-running sessions, record the Task ID
-  from `metadata.yaml` before rebooting and use `--task-id` at capture time
+**Every session gets a new Task ID even after machine restart**
+- State is tracked in `/tmp/ai-chat-logs-sessions/` and cleared on reboot
+- If a session spans a reboot, read the Task ID from the session's `metadata.yaml`
+  and pass it with `--task-id` when running `capture.py`
 
 **Multiple concurrent sessions**
-
-- Each session gets its own `platform_session_id`, so they get distinct Task IDs
-- `next_task_id()` scans the filesystem — if two sessions start simultaneously
-  they could get the same ID. In practice this is unlikely in solo use; the
-  folder-creation step acts as a natural collision guard.
+- Each gets its own `platform_session_id` → distinct Task IDs
+- In solo use, simultaneous session starts are unlikely; the folder-create
+  step acts as a natural collision guard
 
 ---
 
-## Environment variables recognised by `session_init.py`
+## Environment variables
 
 | Variable | Description |
 |---|---|
-| `ANTHROPIC_MODEL` | Model name (e.g. `claude-sonnet-4-6`) |
-| `CLAUDE_MODEL` | Alternative model name variable |
+| `ANTHROPIC_MODEL` | Model name for Claude sessions (e.g. `claude-sonnet-4-6`) |
+| `CLAUDE_MODEL` | Alternative Claude model variable |
 | `OPENAI_MODEL` | Model name for Codex sessions (e.g. `o4-mini`) |
 
-These are checked only when `--model` is not passed and the hook payload does not
-include a `model` field.
+Checked only when `--model` is not passed and the hook payload has no `model` field.

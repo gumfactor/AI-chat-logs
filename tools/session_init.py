@@ -23,22 +23,40 @@ Codex session_start payload (known fields):
   session_id (or thread_id), model
 
 Output JSON (stdout):
-  {"additionalSystemPrompt": "..."}
+  Claude Code (UserPromptSubmit):
+    {
+      "hookSpecificOutput": {
+        "hookEventName": "UserPromptSubmit",
+        "additionalContext": "Your Task ID for this session is TASK-..."
+      }
+    }
 
-  NOTE: "additionalSystemPrompt" is the injection field for Claude Code.
-  Verify the correct field name against current Claude Code hooks docs if
-  the task ID does not appear in the agent's context.
-  Codex injection: TBD — adjust if Codex uses a different output contract.
+  Codex (SessionStart):
+    {
+      "hookSpecificOutput": {
+        "hookEventName": "SessionStart",
+        "additionalContext": "Your Task ID for this session is TASK-..."
+      }
+    }
+
+  The hookEventName is inferred from --agent (claude → UserPromptSubmit,
+  codex → SessionStart). Override with --hook-event if needed.
+
+  Confirmed working: additionalContext is supported by SessionStart and
+  UserPromptSubmit in both platforms (as of 2026-06). PreToolUse and
+  Stop do NOT support additionalContext.
 
 Usage (in hook configuration):
   python3 /path/to/AI-chat-logs/tools/session_init.py --agent claude
   python3 /path/to/AI-chat-logs/tools/session_init.py --agent codex
 
 Options:
-  --agent NAME    Agent name to record: claude, codex, etc. (default: "")
-  --model MODEL   Model override (e.g. claude-sonnet-4-6). Inferred from
-                  payload or environment variables when not given.
-  --dry-run       Print what would happen without writing any files.
+  --agent NAME        Agent name to record: claude, codex, etc. (default: "")
+  --model MODEL       Model override (e.g. claude-sonnet-4-6). Inferred from
+                      payload or environment variables when not given.
+  --hook-event NAME   Override the hookEventName in output JSON. Defaults to
+                      "UserPromptSubmit" for claude, "SessionStart" for codex.
+  --dry-run           Print what would happen without writing any files.
 
 See docs/hooks-setup.md for full configuration instructions.
 """
@@ -256,6 +274,15 @@ def main():
         help="Model override (e.g. claude-sonnet-4-6). Inferred from payload/env when omitted.",
     )
     parser.add_argument(
+        "--hook-event",
+        default="",
+        help=(
+            "Override the hookEventName in the output JSON. "
+            "Defaults to 'UserPromptSubmit' for --agent claude, "
+            "'SessionStart' for --agent codex."
+        ),
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Print what would happen without writing any files or state.",
@@ -347,8 +374,24 @@ def main():
     # ------------------------------------------------------------------
     # 8. Output injection JSON
     # ------------------------------------------------------------------
+    # Both Claude Code (UserPromptSubmit) and Codex (SessionStart) use the
+    # same hookSpecificOutput.additionalContext structure.
+    # Claude Code: hookEventName must be "UserPromptSubmit"
+    # Codex:       hookEventName must be "SessionStart"
+    if args.hook_event:
+        hook_event_name = args.hook_event
+    elif agent == "codex":
+        hook_event_name = "SessionStart"
+    else:
+        hook_event_name = "UserPromptSubmit"
+
     injection_text = build_injection_text(task_id, timestamp_start)
-    output = {"additionalSystemPrompt": injection_text}
+    output = {
+        "hookSpecificOutput": {
+            "hookEventName": hook_event_name,
+            "additionalContext": injection_text,
+        }
+    }
     print(json.dumps(output))
 
     if args.dry_run:
