@@ -1,27 +1,24 @@
 # Questions for Matt
 
+Items marked **[DECIDED]** were resolved by the supervisor and implemented. Items marked **[NEEDS YOUR INPUT]** are waiting on you.
+
 Generated during Phase 1 implementation (2026-06-20).
 
 ---
 
-## 1. Session file naming convention: `transcript.md` vs. `session.md`
+## 1. Session file naming convention: `transcript.md` vs. `session.md` — **[NEEDS YOUR INPUT]**
 
 **Issue:** The `templates/session.md` template defines a unified file (transcript + summary + self-audit in one). The Plan.md describes per-agent files (`orchestrator.md`, `agent-a.md`) plus a separate `summary.md`. The sample session uses `transcript.md` + `summary.md` as separate files.
 
-**Decision needed:** Which convention is authoritative?
-- Option A: Single unified file per agent, named after the agent role (`orchestrator.md`, `agent-a.md`, `transcript.md` for single-agent sessions). Summary and Self-Audit are sections within it.
-- Option B: Separate `transcript.md` (raw export) and `summary.md` (written after close) as distinct files, so the transcript is immutable once committed.
-- Option C: Something else.
+**Supervisor recommendation:** Option B (separate files). Plan.md states "Transcripts are immutable after commit" — this is only enforceable if transcript and summary are separate files. A combined file would require editing the transcript section to add the summary, violating immutability.
 
-The current implementation uses Option B for the sample session and Option A in the template. This should be unified before sessions accumulate.
+**Decision needed from you:** Confirm Option B, or override. Once confirmed, `templates/session.md` will be split into `templates/transcript.md` and `templates/summary.md`.
 
 ---
 
-## 2. `agent-history` vs. `AI-chat-logs` repo name
+## 2. `agent-history` vs. `AI-chat-logs` repo name — **[DECIDED]**
 
-**Issue:** The genesis conversation (TASK-20260620-0001) and Plan.md both refer to the repo as `agent-history`. The actual repo is named `AI-chat-logs`. The GitHub org/repo path recorded in the sample session is `gumfactor/AI-chat-logs`.
-
-**Decision needed:** Is `AI-chat-logs` the final name, or is a rename planned? If final, Plan.md should be updated to remove `agent-history` references to avoid confusion for future readers.
+**Decision:** `AI-chat-logs` is the canonical name. Plan.md has been updated to remove `agent-history` references.
 
 ---
 
@@ -37,16 +34,16 @@ The current implementation uses Option B for the sample session and Option A in 
 
 ---
 
-## 4. `.gitignore` scope: only `index/sessions.db` vs. broader patterns
+## 4. `.gitignore` scope — **[DECIDED]**
 
-**Current state:** `.gitignore` covers `index/sessions.db`, `index/sessions.db-shm`, and `index/sessions.db-wal`.
-
-**Question:** Should the gitignore also cover `index/*.db` (any SQLite file in index/) in case the database is renamed or additional databases are added in Phase 3? Or should it remain explicit to avoid accidentally ignoring intentional files?
+**Decision:** Switched to `index/*.db`, `index/*.db-shm`, `index/*.db-wal` glob patterns. Any SQLite file in `index/` is ignored, which is the right default — there's no reason to commit database files there.
 
 ---
 
-## 5. `orchestrator.md` / `agent-a.md` convention from genesis conversation
+## 5. Multi-agent file layout — **[NEEDS YOUR INPUT]**
 
-**Issue:** Turn 2 of the genesis transcript proposed per-agent files inside each task folder. This is not yet reflected in the templates or sample session. If multi-agent sessions are coming soon, the folder convention should be documented before the first multi-agent capture.
+**Issue:** Plan.md specifies per-agent files inside each task folder (`orchestrator.md`, `agent-a.md`, etc.). This is not yet reflected in the templates. If you're actively running multi-agent sessions now, this should be defined before the first one is captured.
 
-**Decision needed:** Confirm the multi-agent file layout so it can be added to Plan.md and templates before Phase 2 begins.
+**Supervisor recommendation:** Keep it as Plan.md specifies — one `.md` file per agent role, named descriptively (`orchestrator.md`, `research-agent.md`, `coder-agent.md`). Single-agent sessions use `transcript.md`. The `summary.md` is always separate (see Q1).
+
+**Decision needed from you:** Are you running multi-agent sessions yet? If yes, confirm the layout and it will be added to templates.

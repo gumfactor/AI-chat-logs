@@ -2,10 +2,10 @@
 
 ## Repository Structure
 
-One private repository: `agent-history` (or `lab-agent-ops`). All conversation artifacts live here, version-controlled.
+This repository (`AI-chat-logs`) serves as the capture store. All conversation artifacts live here, version-controlled.
 
 ```
-agent-history/
+AI-chat-logs/
 ├── sessions/
 │   └── YYYY/
 │       └── YYYY-MM-DD/
