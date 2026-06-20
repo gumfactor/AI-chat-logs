@@ -4,6 +4,21 @@ Running log of work done on this system. Most recent entry first.
 
 ---
 
+## 2026-06-20 — Phase 2: GitHub Integration
+
+Linked every conversation to the GitHub work it produces.
+
+- Created `.github/PULL_REQUEST_TEMPLATE.md` — GitHub auto-uses this as the default PR body for all PRs in this repo; matches the canonical template with GitHub-specific formatting
+- Updated `templates/pr-template.md` — fixed "agent-history" reference (old name), added help text for Agent/Model fields and Files Changed, aligned with Plan.md spec
+- Created `AGENTS.md` — instructs any agent working on this repo: task ID convention, branch naming, commit message format, metadata.yaml guidance, self-audit requirement, immutability rule, merge rule
+- Created `docs/github-project-board.md` — step-by-step setup guide for the GitHub Projects board; the board itself must be created manually via GitHub UI
+- Updated `README.md` — added `AGENTS.md`, `docs/`, `.github/PULL_REQUEST_TEMPLATE.md`, and `questions-for-Matt.md` to the file table
+- Appended item to `questions-for-Matt.md` — noted that the GitHub Project board requires manual UI creation
+
+Phase 2 acceptance criterion: given any merged PR, you can navigate to the full transcript in under 30 seconds (via Task ID in PR → transcript folder in this repo).
+
+---
+
 ## 2026-06-20
 
 **Bootstrapped the repo.**
