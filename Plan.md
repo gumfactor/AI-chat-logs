@@ -41,7 +41,7 @@ This ID appears in:
 - The PR title and body
 - The `metadata.yaml`
 
-Traceability chain: `commit → PR → issue → transcript folder → full conversation`
+Traceability chain: `commit → PR → issue → transcript folder → platform_url → full conversation`
 
 ## Metadata Schema
 
@@ -49,6 +49,7 @@ Traceability chain: `commit → PR → issue → transcript folder → full conv
 
 ```yaml
 session_id: TASK-20260620-0041
+platform_url: https://claude.ai/chat/abc-123-uuid   # canonical link to source conversation
 timestamp_start: 2026-06-20T15:30:00Z
 timestamp_end: 2026-06-20T16:45:00Z
 repo: org/my-project
