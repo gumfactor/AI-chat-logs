@@ -6,7 +6,7 @@ Python scripts for indexing and searching session transcripts. No third-party pa
 
 ## `session_init.py` — Session initialization hook
 
-Called by the Claude Code `UserPromptSubmit` hook (or the Codex `session_start` hook) at the start of every new chat. On first invocation for a given platform session:
+Called by the Claude Code `UserPromptSubmit` hook (or the Codex `SessionStart` hook) at the start of every new chat. On first invocation for a given platform session:
 
 1. Assigns the next `TASK-YYYYMMDD-NNNN` for today
 2. Creates `sessions/YYYY/YYYY-MM-DD/TASK-ID/metadata.yaml` with a stub containing platform session ID, start timestamp, and model
@@ -37,6 +37,7 @@ echo '{"session_id": "test-abc-123"}' | \
 |---|---|
 | `--agent NAME` | Agent name to record: `claude`, `codex`, etc. |
 | `--model MODEL` | Model override. Inferred from payload or environment when omitted. |
+| `--hook-event NAME` | Override `hookEventName` in output JSON. Defaults to `UserPromptSubmit` for `--agent claude`, `SessionStart` for `--agent codex`. |
 | `--dry-run` | Print what would happen; write nothing. |
 
 **Setup guide:** See `docs/hooks-setup.md` for Claude Code and Codex configuration.
@@ -186,7 +187,7 @@ Session captured successfully.
   Task ID : TASK-20260620-0002
   Folder  : /path/to/AI-chat-logs/sessions/2026/2026-06-20/TASK-20260620-0002
 
-  Files created:
+  Files written:
     .../sessions/2026/2026-06-20/TASK-20260620-0002/transcript.md
     .../sessions/2026/2026-06-20/TASK-20260620-0002/metadata.yaml
     .../sessions/2026/2026-06-20/TASK-20260620-0002/summary.md

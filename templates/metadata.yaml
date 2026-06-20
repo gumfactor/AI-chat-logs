@@ -1,7 +1,6 @@
 session_id:             # TASK-YYYYMMDD-NNNN — injected by hook or assigned manually
 platform_session_id:    # platform's native UUID/thread ID (captured automatically by hook)
-platform_url:           # optional — https://claude.ai/code/session_<id> or similar
-                        # best-effort constructed by hook; URLs may not resolve long-term
+platform_url:           # optional — copy from browser address bar after session; URLs may not resolve long-term
 timestamp_start:        # ISO 8601 (e.g. 2026-06-20T15:30:00Z) — captured by hook at session open
 timestamp_end:          # ISO 8601 — fill in when session ends
 repo:                 # org/repo-name

@@ -119,6 +119,27 @@ def next_task_id(date_compact: str) -> str:
     return f"TASK-{date_compact}-{highest + 1:04d}"
 
 
+def ensure_unique_task_id(task_id: str, session_folder: str):
+    """If session_folder already exists, increment until a free slot is found."""
+    if not os.path.exists(session_folder):
+        return task_id, session_folder
+    m = re.match(r"^(TASK-(\d{8})-)(\d{4})$", task_id)
+    if not m:
+        return task_id, session_folder
+    prefix = m.group(1)
+    date_compact = m.group(2)
+    n = int(m.group(3))
+    year = date_compact[:4]
+    date_dir = f"{year}-{date_compact[4:6]}-{date_compact[6:]}"
+    base = os.path.join(SESSIONS_DIR, year, date_dir)
+    while True:
+        n += 1
+        task_id = f"{prefix}{n:04d}"
+        session_folder = os.path.join(base, task_id)
+        if not os.path.exists(session_folder):
+            return task_id, session_folder
+
+
 # ---------------------------------------------------------------------------
 # Session state tracking (idempotency)
 # ---------------------------------------------------------------------------
@@ -215,8 +236,8 @@ status: open
 """
 
     if dry_run:
-        print(f"[dry-run] Would create: {os.path.join(session_folder, 'metadata.yaml')}")
-        print(content)
+        print(f"[dry-run] Would create: {os.path.join(session_folder, 'metadata.yaml')}", file=sys.stderr)
+        print(content, file=sys.stderr)
         return
 
     os.makedirs(session_folder, exist_ok=True)
@@ -339,6 +360,7 @@ def main():
     # ------------------------------------------------------------------
     task_id = next_task_id(date_compact)
     session_folder = os.path.join(SESSIONS_DIR, year, date_str, task_id)
+    task_id, session_folder = ensure_unique_task_id(task_id, session_folder)
 
     # ------------------------------------------------------------------
     # 6. Write metadata stub

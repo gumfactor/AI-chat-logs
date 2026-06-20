@@ -222,7 +222,7 @@ def main():
             before = before[: -len(DAG_SECTION_HEADER)].rstrip()
         # Also strip the separator that preceded the section header, so we
         # don't accumulate extra '---' lines on repeated --force runs.
-        if before.endswith("---"):
+        while before.endswith("---"):
             before = before[:-3].rstrip()
 
         # Everything from marker_pos to end is replaced by the new dag_section

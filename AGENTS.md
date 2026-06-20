@@ -95,7 +95,11 @@ After the session ends and the PR is merged, update `metadata.yaml` with final c
 
 ## 5. Multi-Agent Session Layout
 
-When a session involves a supervisor/orchestrator and one or more delegates (subagents), each agent gets its own transcript file inside the same session folder:
+There are two distinct multi-agent patterns. Choose the right one for your situation.
+
+### Pattern A — Multiple transcripts, one session (same platform invocation)
+
+When a supervisor and one or more delegates all run inside the same platform session (same TASK-ID, same branch), each agent gets its own transcript file inside the shared session folder:
 
 ```
 sessions/YYYY/YYYY-MM-DD/TASK-ID/
@@ -111,11 +115,14 @@ Naming convention for per-agent files: use the agent's role, not a generic lette
 
 For single-agent sessions, use `transcript.md` as the filename.
 
-The DAG relationship between sessions is tracked via `metadata.yaml`:
-- Orchestrator sets `orchestrator: true` and lists `subagent_sessions: [TASK-ID-a, TASK-ID-b]`
-- Each subagent sets `parent_session: TASK-ID-of-orchestrator`
+### Pattern B — Separate sessions per subagent (each gets its own TASK-ID)
 
-This is what `tools/dag.py` reads to generate the Mermaid diagram.
+When each agent runs as a separate platform session (separate Claude Code invocation, separate hook firing), each gets its own TASK-ID and its own `sessions/YYYY/YYYY-MM-DD/TASK-ID/` folder. The DAG links them:
+
+- Orchestrator session: `orchestrator: true`, `subagent_sessions: [TASK-ID-a, TASK-ID-b]`
+- Each subagent session: `parent_session: TASK-ID-of-orchestrator`
+
+This is what `tools/dag.py` reads to generate the Mermaid diagram. Use `tools/generate_summary.py TASK-ID` on the orchestrator session to append the full DAG to its `summary.md`.
 
 ---
 

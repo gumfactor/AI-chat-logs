@@ -90,6 +90,14 @@ cat sessions/$(date +%Y)/$(date +%Y-%m-%d)/TASK-*/metadata.yaml
 You should see a `TASK-<today>-NNNN/` folder with `platform_session_id` and
 `timestamp_start` already populated.
 
+**Context compaction note:** Claude Code injects the Task ID via `additionalContext`
+on the first prompt. If the conversation is later compacted (context summarised by
+the platform), the injected text may not survive into the new context window. The
+`metadata.yaml` stub is always written regardless, so the Task ID is durable — but
+you may need to tell the agent its Task ID again after a compaction event (read it
+from `sessions/YYYY/YYYY-MM-DD/TASK-*/metadata.yaml`). Codex's `SessionStart`
+fires fresh on `compact` and `clear` events, so re-injection is automatic there.
+
 ---
 
 ## Codex (CLI and VS Code / Cursor / Windsurf extension)

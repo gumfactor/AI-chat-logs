@@ -179,11 +179,12 @@ def write_metadata(folder: str, task_id: str, agent: str, model: str,
     branch_val = f"agent/{task_id}-description"  # placeholder; user should update
 
     content = f"""session_id: {task_id}
+platform_session_id: null
 platform_url: {platform_val}
-timestamp_start: {now_iso}    # set at capture time; update with actual session start if known
+timestamp_start: "{now_iso}"  # set at capture time; update with actual session start if known
 timestamp_end: null            # fill in when session ends
 repo: {repo_val}
-branch: {branch_val}          # update with actual branch name
+branch: {yaml_str(branch_val)}  # update with actual branch name
 parent_session: null
 forked_from: null
 agent: {agent_val}

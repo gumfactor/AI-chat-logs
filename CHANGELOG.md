@@ -6,7 +6,7 @@ Tracks structural changes to this system: folder conventions, metadata schema up
 
 ## 2026-06-20 — Hook-based session initialization
 
-- Added `tools/session_init.py` — hook script called by Claude Code (`UserPromptSubmit`) and Codex (`session_start`) at session start; assigns next `TASK-YYYYMMDD-NNNN`, creates `sessions/.../TASK-ID/metadata.yaml` stub, outputs `{"additionalSystemPrompt": "..."}` to inject Task ID into agent context. Idempotent via temp-file state lock in `/tmp/ai-chat-logs-sessions/`. Flags: `--agent`, `--model`, `--dry-run`.
+- Added `tools/session_init.py` — hook script called by Claude Code (`UserPromptSubmit`) and Codex (`SessionStart`) at session start; assigns next `TASK-YYYYMMDD-NNNN`, creates `sessions/.../TASK-ID/metadata.yaml` stub, outputs `{"hookSpecificOutput": {"hookEventName": "...", "additionalContext": "..."}}` to inject Task ID into agent context. Idempotent via temp-file state lock in `/tmp/ai-chat-logs-sessions/`. Flags: `--agent`, `--model`, `--hook-event`, `--dry-run`.
 - Added `docs/hooks-setup.md` — step-by-step hook configuration for Claude Code (`~/.claude/settings.json`) and Codex (`~/.codex/config.toml`), including VS Code/Cursor/Windsurf extension. Covers: verification steps, `--dry-run` testing, Codex injection caveat, troubleshooting.
 - Updated `templates/metadata.yaml` — added `platform_session_id` field (platform's native UUID/thread ID, captured automatically by hook).
 - Updated `tools/capture.py` — added `--task-id` flag; when given and session folder already exists (hook-initialized), writes only `transcript.md` and `summary.md` and preserves the hook-written `metadata.yaml`.
