@@ -12,6 +12,7 @@ Chat logs are the laboratory notebook of AI-assisted development. Code is the fi
 |---|---|
 | `Vision.md` | Goals, constraints, and what success looks like |
 | `Plan.md` | Phased implementation plan |
+| `MANUAL.md` | Human operator guide — how to use the system day-to-day |
 | `AGENTS.md` | Instructions for AI agents working on this repo (full reference) |
 | `CLAUDE.md` | Claude Code auto-loads this; it points to `AGENTS.md` |
 | `WORKLOG.md` | Running log of work done on this system |
