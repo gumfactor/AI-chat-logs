@@ -28,3 +28,16 @@ The session produced the following decisions, which became the foundation of thi
 ## Status
 
 Merged. The outputs of this conversation (Vision.md, Plan.md, README.md, WORKLOG.md, CHANGELOG.md) were committed to the main branch of this repository on 2026-06-20.
+
+---
+
+## Session DAG
+
+<!-- dag:generated -->
+
+```mermaid
+graph TD
+    TASK_20260620_0001["TASK-20260620-0001 (chatgpt) [orchestrator]"]
+    TASK_20260620_0002["TASK-20260620-0002 (claude)"]
+    TASK_20260620_0001 --> TASK_20260620_0002
+```

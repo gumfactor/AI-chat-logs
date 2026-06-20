@@ -1,0 +1,20 @@
+session_id: TASK-20260620-0002
+platform_url: null
+timestamp_start: null
+timestamp_end: null
+repo: gumfactor/AI-chat-logs
+branch: agent/TASK-20260620-0002-phase1-capture
+parent_session: TASK-20260620-0001
+forked_from: null
+agent: claude
+model: claude-sonnet-4-6
+orchestrator: false
+subagent_sessions: []
+files_touched:
+  - sessions/2026/2026-06-20/TASK-20260620-0001/metadata.yaml
+  - sessions/2026/2026-06-20/TASK-20260620-0001/transcript.md
+  - sessions/2026/2026-06-20/TASK-20260620-0001/summary.md
+commits: []
+prs: []
+issues: []
+status: merged
