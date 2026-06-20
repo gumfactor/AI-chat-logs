@@ -143,9 +143,10 @@ When an agent task involves work on `AI-chat-logs` itself (as opposed to capturi
 1. Confirm you have a Task ID.
 2. Work on an `agent/TASK-...` branch.
 3. Prefix every commit with `[TASK-ID]`.
-4. When done, open a PR using `templates/pr-template.md` as the body.
+4. When done, open a PR. GitHub will auto-populate the PR body from `.github/PULL_REQUEST_TEMPLATE.md`. Do not copy from `templates/pr-template.md` manually — `templates/pr-template.md` is the canonical reference definition for documentation purposes, but GitHub's auto-population handles the actual PR body. Fill in every field in the auto-populated body.
 5. Complete the self-audit in `summary.md` before considering the task finished.
-6. If you have open questions for the human, append them to `questions-for-Matt.md` using the established format.
+6. If you have open questions for the human, append them to `questions-for-Matt.md` using the established format (see Section 9).
+7. **Post-merge step:** After the human merges the PR, update the session's `metadata.yaml` with the final commit hashes (in `commits:`) and the PR URL (in `prs:`), then change `status:` to `merged`. Commit that update with message `[TASK-ID] update metadata post-merge`.
 
 ---
 

@@ -47,3 +47,32 @@ Generated during Phase 1 implementation (2026-06-20).
 **Supervisor recommendation:** Keep it as Plan.md specifies — one `.md` file per agent role, named descriptively (`orchestrator.md`, `research-agent.md`, `coder-agent.md`). Single-agent sessions use `transcript.md`. The `summary.md` is always separate (see Q1).
 
 **Decision needed from you:** Are you running multi-agent sessions yet? If yes, confirm the layout and it will be added to templates.
+
+---
+
+## 6. GitHub Project board creation — **[NEEDS YOUR INPUT]**
+
+**Issue:** Phase 2 requires a GitHub Project board with columns `Backlog → Assigned to Agent → Agent Returned → Human Review → Needs Repair → Merged → Archived`. This board **cannot be created by an agent via files** — it requires the GitHub web UI (GitHub's GraphQL API could be used via `gh api` calls, but that is not implemented here).
+
+**Options considered:**
+- A) You create it manually now, following `docs/github-project-board.md`.
+- B) Defer until Phase 3 is complete and you have a reason to track tasks actively.
+
+**Supervisor recommendation:** Option A — create it now. The board is cheap to set up and immediately useful for tracking the Phase 3 and Phase 4 tasks.
+
+**Decision needed from you:** Follow the setup guide at `docs/github-project-board.md` to create the board manually. No further file changes are needed in this repo once it exists.
+
+---
+
+## 7. PR template propagation to other project repos — **[NEEDS YOUR INPUT]**
+
+**Issue:** The `.github/PULL_REQUEST_TEMPLATE.md` created in Phase 2 applies to PRs opened in `AI-chat-logs` itself. Plan.md Phase 2 item 3 says to add an `AGENTS.md` (or `CLAUDE.md`) to **each project repo** where agent work happens. Those repos are separate — the template and agent instructions need to be manually added or propagated to each one.
+
+**Options considered:**
+- A) Copy manually each time you start a new project repo that uses agents.
+- B) Create a small shell script or `gh` command that bootstraps a new project repo with the PR template and `AGENTS.md`/`CLAUDE.md`.
+- C) Create a GitHub repository template containing these files, so new repos created from it inherit them automatically.
+
+**Supervisor recommendation:** Option A for now (you have few project repos), with Option C as the Phase 4 upgrade when the system is stable.
+
+**Decision needed from you:** How many project repos do you currently use agents on? If it's more than 2–3, Option B or C becomes worth the setup cost now.

@@ -4,6 +4,16 @@ Tracks structural changes to this system: folder conventions, metadata schema up
 
 ---
 
+## 2026-06-20 — Phase 2: GitHub integration files
+
+- Added `.github/PULL_REQUEST_TEMPLATE.md` — GitHub-native PR template; auto-populates PR body with Task ID, transcript link, platform URL, agent/model, files changed, testing info, uncertainties, and follow-up tasks
+- Updated `templates/pr-template.md` — corrected repo name reference from `agent-history` to `AI-chat-logs`; added instructional comments to all fields; aligned with Plan.md Phase 2 spec
+- Added `AGENTS.md` — agent operating instructions for this repo: Task ID convention, branch naming (`agent/TASK-ID-description`), commit format (`[TASK-ID] description`), metadata.yaml field guidance, self-audit requirement, transcript immutability rule, merge rule, post-merge metadata update step
+- Added `CLAUDE.md` — Claude Code auto-loads this file; it is a short pointer to `AGENTS.md` (Claude Code reads `CLAUDE.md`, not `AGENTS.md`, automatically)
+- Added `docs/github-project-board.md` — setup guide for GitHub Projects board with seven-column pipeline (`Backlog → Assigned to Agent → Agent Returned → Human Review → Needs Repair → Merged → Archived`), step-by-step creation instructions, and per-column usage notes
+- Updated `README.md` file table: added entries for `AGENTS.md`, `CLAUDE.md`, `docs/`, `.github/PULL_REQUEST_TEMPLATE.md`, and `questions-for-Matt.md`
+- Noted in `questions-for-Matt.md` that the GitHub Project board must be created manually via GitHub UI
+
 ## 2026-06-20 — Initial structure
 
 - Established repo as the canonical home for system design documents

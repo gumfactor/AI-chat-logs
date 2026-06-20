@@ -29,10 +29,15 @@ List key files modified, added, or deleted. Example:
 
 ## Uncertainties
 
-<!-- What could be wrong? What was not verified? What did the agent flag as uncertain? -->
+<!-- What could be wrong? What was not verified? What did the agent flag as uncertain?
+Leave blank only if confidence level is high AND all tests passed. -->
 
 ## Follow-up Tasks
 
 <!-- Issues or tasks created as a result of this work. Link to GitHub issues where possible.
 - [ ] #123 — description
 -->
+
+---
+
+_This PR was produced by an AI agent. The task ID links to the full conversation transcript in the [AI-chat-logs](https://github.com/gumfactor/AI-chat-logs) repo. Agents propose; only the human merges._

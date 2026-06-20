@@ -1,12 +1,12 @@
 ## Task
 
 **Task ID:** TASK-YYYYMMDD-NNNN
-**Transcript:** [link to session folder — `sessions/YYYY/YYYY-MM-DD/TASK-YYYYMMDD-NNNN/`](../tree/main/sessions/YYYY/YYYY-MM-DD/TASK-YYYYMMDD-NNNN/)
+**Transcript:** [link to session folder — `sessions/YYYY/YYYY-MM-DD/TASK-YYYYMMDD-NNNN/`](https://github.com/gumfactor/AI-chat-logs/tree/main/sessions/YYYY/YYYY-MM-DD/TASK-YYYYMMDD-NNNN/)
 **Platform URL:** [link to original chat conversation]
 
 ## Agent
 
-**Agent:** <!-- codex | claude | gemini | etc. -->
+**Agent:** <!-- codex | claude | gemini | chatgpt | etc. -->
 **Model:** <!-- e.g. claude-sonnet-4-5, o4-mini, gemini-2.0-flash -->
 
 ## Changes
