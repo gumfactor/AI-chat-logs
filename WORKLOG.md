@@ -4,6 +4,15 @@ Running log of work done on this system. Most recent entry first.
 
 ---
 
+## 2026-06-20 — Smoke test: all phases
+
+End-to-end smoke test run across all five phases. All 11 steps passed on first attempt:
+capture → index → search (global + scoped) → DAG generation → summary append (idempotency verified) → template and AGENTS.md checks. No fixes required. System is ready for real use.
+
+One shell note: `capture.py` stdin reads raw bytes; callers should use `printf` or `echo -e` rather than bare `echo` when piping multi-line transcripts so newlines are expanded correctly.
+
+---
+
 ## 2026-06-20 — Phase 5: DAG Visualization
 
 Built Mermaid DAG generation tooling so any multi-agent task has a diagram in its summary showing the full session tree.
