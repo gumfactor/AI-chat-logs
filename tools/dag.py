@@ -430,15 +430,28 @@ def main():
                 print(msg)
             return
 
-    # Detect and remove cycle edges
+    # Detect and remove cycle edges.
+    # Strategy: attempt from explicit roots first. If no roots exist (every node
+    # is part of a cycle with no entry point), fall back to running detection
+    # from every node so fully-circular graphs are still caught.
     cycle_edges = set()
     if root_id is not None:
         cycle_edges = detect_cycles(children, root_id)
     else:
-        # Check cycles from all roots (nodes with no parent)
         roots = [sid for sid in sessions if parents.get(sid) is None]
-        for r in roots:
-            cycle_edges |= detect_cycles(children, r)
+        if roots:
+            for r in roots:
+                cycle_edges |= detect_cycles(children, r)
+        else:
+            # Fully-circular graph: every node has a parent. Run detection from
+            # every node; the DFS visited-set prevents redundant work.
+            all_visited = set()
+            for sid in sessions:
+                if sid not in all_visited:
+                    edges = detect_cycles(children, sid)
+                    cycle_edges |= edges
+                    # Mark anything reachable from sid as visited
+                    all_visited.update(descendants(children, sid))
 
     # Render the diagram
     lines = render_mermaid(sessions, children, parents, scope_ids, cycle_edges)

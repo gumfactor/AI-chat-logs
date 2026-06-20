@@ -4,6 +4,31 @@ Running log of work done on this system. Most recent entry first.
 
 ---
 
+## 2026-06-20 — Phase 5: DAG Visualization
+
+Built Mermaid DAG generation tooling so any multi-agent task has a diagram in its summary showing the full session tree.
+
+- Created `tools/dag.py` — walks `sessions/` and reads all `metadata.yaml` files; builds a parent/child graph using `subagent_sessions` (primary) and `parent_session` (fallback); renders a `graph TD` Mermaid diagram. Options: `--root SESSION-ID` (scope to a subtree), `--output FILE` (write to file instead of stdout), `--append-to FILE` (append diagram to an existing file). Node labels: `"SESSION-ID (agent)"` with ` [orchestrator]` suffix when `orchestrator: true`. Abandoned sessions styled grey (`fill:#eee,color:#999`). Detects circular references and skips with warning. Prints "no relationships" message when all sessions are independent. Silently skips session folders with no `metadata.yaml`.
+- Created `tools/generate_summary.py` — creates or updates a session's `summary.md` with a Mermaid DAG section appended at the bottom. If `summary.md` does not exist, creates it from the standard blank template first. Idempotent: if the DAG section marker is already present, prints a message and exits without modifying the file.
+- Created `sessions/2026/2026-06-20/TASK-20260620-0002/` — stub session demonstrating multi-agent parent/child relationship; `parent_session: TASK-20260620-0001` so the DAG correctly shows the TASK-0001 → TASK-0002 edge.
+- Updated `tools/README.md` — added full sections for `dag.py` and `generate_summary.py` with usage examples, option descriptions, and sample output.
+- Appended DAG section to `sessions/2026/2026-06-20/TASK-20260620-0001/summary.md`.
+
+All tests passed:
+1. `python tools/dag.py` — Mermaid diagram output showing TASK-0001 → TASK-0002.
+2. `python tools/dag.py --root TASK-20260620-0001` — same output, rooted at 0001.
+3. `python tools/dag.py --root NONEXISTENT` — error message, exit 1.
+4. `python tools/generate_summary.py TASK-20260620-0001` — appended DAG to summary.md; idempotent on second run.
+5. Circular reference detection — warning printed to stderr, no infinite loop.
+6. Abandoned session styling — `style NODE fill:#eee,color:#999` present in output.
+7. `--append-to` flag — correctly appends diagram to an existing file.
+8. Missing metadata.yaml — silently skipped.
+9. Leaf node `--root` (no subagents) — "no relationships" message, exit 0.
+
+Phase 5 acceptance criterion: any multi-agent task has a diagram in its summary showing the full session tree. Criterion met — `generate_summary.py TASK-ID` appends the Mermaid diagram in one command.
+
+---
+
 ## 2026-06-20 — Phase 4: Semi-Automatic Capture
 
 Built `tools/capture.py` — a CLI script that creates the full session folder structure from a raw transcript (file or stdin), eliminating the manual folder-creation and template-copying steps.

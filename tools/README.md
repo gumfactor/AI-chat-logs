@@ -145,3 +145,87 @@ Session captured successfully.
 2. After the session's PR is merged, update `metadata.yaml` with commit SHAs and the PR URL, and set `status: merged`.
 3. Write the `summary.md` — including the **Self-Audit** section required by `AGENTS.md`.
 4. Commit: `[TASK-ID] capture session transcript`.
+
+---
+
+## `dag.py` — Generate session DAG diagrams
+
+Reads all `metadata.yaml` files in `sessions/` and generates a Mermaid `graph TD` diagram showing which sessions spawned which, using `subagent_sessions` (primary) and `parent_session` (fallback) fields.
+
+**Prerequisites:** Python 3.7+. No pip installs needed.
+
+**Usage:**
+
+```bash
+# Generate diagram for all sessions
+python tools/dag.py
+
+# Generate diagram rooted at a specific session (includes all descendants)
+python tools/dag.py --root TASK-20260620-0041
+
+# Write output to a file instead of stdout
+python tools/dag.py --output /tmp/dag.md
+
+# Append diagram to a session's summary.md
+python tools/dag.py --root TASK-20260620-0041 \
+    --append-to sessions/2026/2026-06-20/TASK-20260620-0041/summary.md
+```
+
+**Sample output:**
+
+````
+```mermaid
+graph TD
+    TASK_20260620_0001["TASK-20260620-0001 (chatgpt) [orchestrator]"]
+    TASK_20260620_0002["TASK-20260620-0002 (claude)"]
+    TASK_20260620_0001 --> TASK_20260620_0002
+```
+````
+
+**Node labels** use the format `"SESSION-ID (agent)"`. If `orchestrator: true` is set in the session's metadata, the label gets ` [orchestrator]` appended.
+
+**Abandoned sessions** (those with `status: abandoned` in metadata) are rendered with a grey style: `style NODE_ID fill:#eee,color:#999`.
+
+**Edge sources:** edges come from `subagent_sessions` in the parent's metadata. If that list is absent or empty, the `parent_session` field in the child's metadata is used as a fallback.
+
+**If no relationships exist** across all sessions (all sessions are independent), the tool prints: `No parent/child relationships found. All sessions are independent.`
+
+**Error handling:**
+- `--root NONEXISTENT` — exits 1 with a clear error message
+- Missing `metadata.yaml` — silently skips that session folder
+- Circular references in parent/child chains — detected, skipped with a warning to stderr
+
+---
+
+## `generate_summary.py` — Create or update a session's summary.md with a DAG section
+
+Creates a `summary.md` from the standard blank template (if it doesn't exist yet), and appends a Mermaid DAG section at the bottom. If `summary.md` already exists, the DAG section is only appended if it isn't already there (idempotent).
+
+**Prerequisites:** Python 3.7+. No pip installs needed.
+
+**Usage:**
+
+```bash
+python tools/generate_summary.py TASK-20260620-0041
+```
+
+**What it does:**
+
+1. Finds the session folder for the given Task ID in `sessions/`.
+2. If `summary.md` does not exist: creates it from the standard blank template and appends the Mermaid DAG section.
+3. If `summary.md` already exists and does not contain the DAG marker: appends the DAG section.
+4. If `summary.md` already exists and already contains the DAG marker: prints "DAG section already present. Nothing to do." and exits 0.
+
+This is the "auto-generate the Mermaid diagram as part of `summary.md` once the task closes" behaviour described in Phase 5 of `Plan.md`.
+
+**Sample output:**
+
+```
+Appended DAG section to: /path/to/sessions/2026/2026-06-20/TASK-20260620-0041/summary.md
+```
+
+On a second run (idempotency check):
+
+```
+DAG section already present in /path/to/.../summary.md. Nothing to do.
+```

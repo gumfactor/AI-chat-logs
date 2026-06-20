@@ -108,3 +108,35 @@ Generated during Phase 1 implementation (2026-06-20).
 **Supervisor recommendation:** Option A is correct for interactive use. Option B or C is better if you plan to use `capture.py` in CI or automation scripts.
 
 **Decision needed from you:** Will you use `--index` in automated scripts that check exit codes?
+
+---
+
+## 10. DAG `--append-to` vs. `generate_summary.py` idempotency semantics — **[NEEDS YOUR INPUT]**
+
+**Issue:** `tools/dag.py --append-to FILE` is intentionally NOT idempotent — it appends the Mermaid block every time it is called. `tools/generate_summary.py` IS idempotent (checks for the `<!-- dag:generated -->` marker before appending). This split is deliberate: `dag.py` is a low-level primitive; `generate_summary.py` is the high-level workflow tool.
+
+**However:** if you call `dag.py --append-to summary.md` directly (bypassing `generate_summary.py`), repeated calls will duplicate the diagram in the file.
+
+**Options:**
+- A) Current behavior: `--append-to` is a dumb append; users should use `generate_summary.py` for idempotent workflow. Document clearly.
+- B) Make `--append-to` idempotent by checking for the DAG marker before appending (like `generate_summary.py` does).
+- C) Remove `--append-to` from `dag.py` entirely — all file-append use goes through `generate_summary.py`.
+
+**Supervisor recommendation:** Option A is fine for now. `generate_summary.py` is the recommended entry point; `--append-to` is a power-user escape hatch. The README already documents the distinction.
+
+**Decision needed from you:** Are you likely to call `dag.py --append-to` directly in scripts? If yes, Option B is safer.
+
+---
+
+## 11. DAG re-generation when session graph changes — **[NEEDS YOUR INPUT]**
+
+**Issue:** `generate_summary.py` is idempotent — once the DAG section is written to `summary.md`, it will not update it even if new subagent sessions are added to the graph later. This means the DAG in `summary.md` can become stale if the session tree grows after the initial generation.
+
+**Options:**
+- A) Current behavior: once written, the DAG section is never updated automatically. Users manually re-run `generate_summary.py` after deleting the `<!-- dag:generated -->` marker.
+- B) Add a `--force` flag to `generate_summary.py` that replaces (not appends) the DAG section even if already present.
+- C) Always replace the DAG section on each run (no idempotency check; last write wins).
+
+**Supervisor recommendation:** Option B — add `--force` as an explicit opt-in. The current default protects against accidental overwrites in a no-op run; `--force` provides an escape hatch for intentional regeneration.
+
+**Decision needed from you:** Will session graphs change after initial `summary.md` generation (i.e., do you add subagents to an in-progress session mid-task)? If yes, Option B or C is needed.

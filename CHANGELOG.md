@@ -4,6 +4,14 @@ Tracks structural changes to this system: folder conventions, metadata schema up
 
 ---
 
+## 2026-06-20 — Phase 5: DAG visualization
+
+- Added `tools/dag.py` — Mermaid DAG generator; reads all `metadata.yaml` files in `sessions/`; builds parent/child graph using `subagent_sessions` (primary) and `parent_session` (fallback); renders `graph TD` Mermaid diagram. Flags: `--root SESSION-ID` (subtree scope), `--output FILE` (write to file), `--append-to FILE` (append to existing file). Node labels: `"SESSION-ID (agent)"` with ` [orchestrator]` suffix when `orchestrator: true`. Abandoned sessions styled grey. Circular reference detection with warning; handles fully-circular graphs (no root nodes) by falling back to per-node DFS. Silently skips session folders missing `metadata.yaml`. Prints "no relationships" message when all sessions are independent.
+- Added `tools/generate_summary.py` — creates or updates `summary.md` for a session; creates blank template if missing; appends Mermaid DAG section; idempotent (skips if DAG marker already present). Imports and reuses DAG logic from `dag.py`.
+- Added `sessions/2026/2026-06-20/TASK-20260620-0002/` — stub sample session demonstrating multi-agent provenance; `parent_session: TASK-20260620-0001` creates the TASK-0001 → TASK-0002 edge in the DAG.
+- Updated `tools/README.md` — added sections for `dag.py` and `generate_summary.py`.
+- Updated `sessions/2026/2026-06-20/TASK-20260620-0001/summary.md` — appended auto-generated Mermaid DAG section.
+
 ## 2026-06-20 — Phase 4: Semi-automatic capture
 
 - Added `tools/capture.py` — CLI capture tool; reads transcript from `--file` or stdin; auto-generates next `TASK-YYYYMMDD-NNNN` ID by scanning existing session folders; creates `sessions/YYYY/YYYY-MM-DD/TASK-ID/` with `transcript.md`, `metadata.yaml`, and blank `summary.md`; `--index` flag triggers the indexer post-capture; exits non-zero with error message on empty transcript.
