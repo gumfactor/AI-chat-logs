@@ -1,0 +1,6 @@
+index/*.db
+index/*.db-shm
+index/*.db-wal
+tools/__pycache__/
+**/__pycache__/
+*.pyc

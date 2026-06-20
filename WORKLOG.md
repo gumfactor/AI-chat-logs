@@ -4,6 +4,109 @@ Running log of work done on this system. Most recent entry first.
 
 ---
 
+## 2026-06-20 — Hook-based session initialization
+
+Implemented automatic Task ID assignment via platform hooks, eliminating the requirement to manually assign and communicate a Task ID before each session.
+
+Design decision: keep custom `TASK-YYYYMMDD-NNNN` IDs (human-readable, sequential, cross-platform) and additionally capture the platform's native session UUID in `platform_session_id`. The platform URL goes in `platform_url` as before.
+
+- Created `tools/session_init.py` — hook script; assigns next Task ID, writes metadata stub, injects ID into agent context via stdout JSON. Handles: missing payload, idempotency (temp-file lock per platform session ID), model inference from payload or env vars, platform URL construction for known Claude Code session ID formats. Exit codes: 0 always (no-op on failure to avoid blocking the agent).
+- Created `docs/hooks-setup.md` — complete setup guide for Claude Code and Codex (CLI and IDE extension). Covers configuration, verification, fallback if injection doesn't work, and troubleshooting.
+- Updated `templates/metadata.yaml` — added `platform_session_id` field.
+- Updated `tools/capture.py` — added `--task-id` flag; when session folder pre-exists (hook already ran), preserves hook-written `metadata.yaml` instead of overwriting it.
+- Updated `AGENTS.md`, `MANUAL.md`, `tools/README.md`, `README.md` — all reflect hook-first workflow with manual fallback.
+
+---
+
+## 2026-06-20 — Smoke test: all phases
+
+End-to-end smoke test run across all five phases. All 11 steps passed on first attempt:
+capture → index → search (global + scoped) → DAG generation → summary append (idempotency verified) → template and AGENTS.md checks. No fixes required. System is ready for real use.
+
+One shell note: `capture.py` stdin reads raw bytes; callers should use `printf` or `echo -e` rather than bare `echo` when piping multi-line transcripts so newlines are expanded correctly.
+
+---
+
+## 2026-06-20 — Phase 5: DAG Visualization
+
+Built Mermaid DAG generation tooling so any multi-agent task has a diagram in its summary showing the full session tree.
+
+- Created `tools/dag.py` — walks `sessions/` and reads all `metadata.yaml` files; builds a parent/child graph using `subagent_sessions` (primary) and `parent_session` (fallback); renders a `graph TD` Mermaid diagram. Options: `--root SESSION-ID` (scope to a subtree), `--output FILE` (write to file instead of stdout), `--append-to FILE` (append diagram to an existing file). Node labels: `"SESSION-ID (agent)"` with ` [orchestrator]` suffix when `orchestrator: true`. Abandoned sessions styled grey (`fill:#eee,color:#999`). Detects circular references and skips with warning. Prints "no relationships" message when all sessions are independent. Silently skips session folders with no `metadata.yaml`.
+- Created `tools/generate_summary.py` — creates or updates a session's `summary.md` with a Mermaid DAG section appended at the bottom. If `summary.md` does not exist, creates it from the standard blank template first. Idempotent: if the DAG section marker is already present, prints a message and exits without modifying the file.
+- Created `sessions/2026/2026-06-20/TASK-20260620-0002/` — stub session demonstrating multi-agent parent/child relationship; `parent_session: TASK-20260620-0001` so the DAG correctly shows the TASK-0001 → TASK-0002 edge.
+- Updated `tools/README.md` — added full sections for `dag.py` and `generate_summary.py` with usage examples, option descriptions, and sample output.
+- Appended DAG section to `sessions/2026/2026-06-20/TASK-20260620-0001/summary.md`.
+
+All tests passed:
+1. `python tools/dag.py` — Mermaid diagram output showing TASK-0001 → TASK-0002.
+2. `python tools/dag.py --root TASK-20260620-0001` — same output, rooted at 0001.
+3. `python tools/dag.py --root NONEXISTENT` — error message, exit 1.
+4. `python tools/generate_summary.py TASK-20260620-0001` — appended DAG to summary.md; idempotent on second run.
+5. Circular reference detection — warning printed to stderr, no infinite loop.
+6. Abandoned session styling — `style NODE fill:#eee,color:#999` present in output.
+7. `--append-to` flag — correctly appends diagram to an existing file.
+8. Missing metadata.yaml — silently skipped.
+9. Leaf node `--root` (no subagents) — "no relationships" message, exit 0.
+
+Phase 5 acceptance criterion: any multi-agent task has a diagram in its summary showing the full session tree. Criterion met — `generate_summary.py TASK-ID` appends the Mermaid diagram in one command.
+
+---
+
+## 2026-06-20 — Phase 4: Semi-Automatic Capture
+
+Built `tools/capture.py` — a CLI script that creates the full session folder structure from a raw transcript (file or stdin), eliminating the manual folder-creation and template-copying steps.
+
+- Created `tools/capture.py` — reads a transcript from `--file` or stdin; generates the next available `TASK-YYYYMMDD-NNNN` ID for today; creates `sessions/YYYY/YYYY-MM-DD/TASK-ID/`; writes `transcript.md` (with header block), `metadata.yaml` (all known fields filled, unknowns set to `null`), and a blank `summary.md` template. Optional `--index` flag runs the indexer automatically. Handles: missing sessions/ dir, ID increment from existing sessions, empty transcript error, collision guard.
+- Updated `tools/README.md` — added full `capture.py` section with usage examples, options table, sample output, and post-capture workflow.
+
+All tests passed:
+1. Basic capture from file — session folder created, all three files present, metadata.yaml valid YAML, summary.md is blank template.
+2. Task ID increment — second capture on same date produced NNNN+1 (0003 after 0002).
+3. Empty transcript — exited with clear error message, no folder created.
+4. Stdin mode (`echo "..." | python tools/capture.py`) — worked correctly.
+5. `--index` flag — indexer ran automatically after capture, printed session count.
+
+Phase 4 acceptance criterion: a session can be captured in under 60 seconds with no manual text copying. Criterion met — one command with `--file` or a pipe from stdin.
+
+---
+
+## 2026-06-20 — Phase 3: Searchable Index
+
+Built the SQLite FTS5 search tooling so all captured transcripts are queryable by keyword, topic, or session.
+
+- Created `tools/index.py` — walks `sessions/` recursively; reads each session's `metadata.yaml`; upserts all `.md` files into two SQLite tables: `transcripts` (FTS5 full-text) and `session_meta` (structured metadata). Idempotent: safe to re-run after every commit. Prints one `[indexed]` line per session.
+- Created `tools/search.py` — queries the FTS5 index and prints session ID, date, agent, repo, filename, and a context snippet (~200 chars) for each match. Supports `--session` filter to restrict search to a specific session. Prints a clear error if the index has not been built yet.
+- Created `tools/README.md` — documents both scripts: what they do, prerequisites (Python 3 standard library only), usage examples, and re-run guidance.
+- Removed `tools/.gitkeep` placeholder (now that real files live in `tools/`).
+
+All tests passed:
+1. `python tools/index.py` — completed, printed `[indexed] TASK-20260620-0001 (2 files)`.
+2. `python tools/search.py "audit"` — returned 2 matching results with snippets.
+3. `python tools/search.py "nonexistent_term_xyz"` — printed "No results found."
+4. `python tools/search.py "audit" --session TASK-20260620-0001` — filtered results correctly.
+5. Missing-db error — printed helpful message directing user to run index.py first.
+6. Idempotency — running indexer twice produces exactly 2 transcript rows and 1 metadata row (no duplicates).
+
+Phase 3 acceptance criterion: `python tools/search.py "auth flow"` returns all sessions that discussed authentication. Verified.
+
+---
+
+## 2026-06-20 — Phase 2: GitHub Integration
+
+Linked every conversation to the GitHub work it produces.
+
+- Created `.github/PULL_REQUEST_TEMPLATE.md` — GitHub auto-uses this as the default PR body for all PRs in this repo; matches the canonical template with GitHub-specific formatting
+- Updated `templates/pr-template.md` — fixed "agent-history" reference (old name), added help text for Agent/Model fields and Files Changed, aligned with Plan.md spec
+- Created `AGENTS.md` — instructs any agent working on this repo: task ID convention, branch naming, commit message format, metadata.yaml guidance, self-audit requirement, immutability rule, merge rule, post-merge metadata update
+- Created `CLAUDE.md` — Claude Code loads this automatically; short pointer to `AGENTS.md` (Claude Code looks for `CLAUDE.md`, not `AGENTS.md`)
+- Created `docs/github-project-board.md` — step-by-step setup guide for the GitHub Projects board; the board itself must be created manually via GitHub UI
+- Updated `README.md` — added `AGENTS.md`, `CLAUDE.md`, `docs/`, `.github/PULL_REQUEST_TEMPLATE.md`, and `questions-for-Matt.md` to the file table
+- Appended two items to `questions-for-Matt.md`: Q6 (GitHub Project board requires manual UI creation) and Q7 (PR template propagation to other project repos)
+
+Phase 2 acceptance criterion: given any merged PR, you can navigate to the full transcript in under 30 seconds (via Task ID in PR → transcript folder in this repo).
+
+---
+
 ## 2026-06-20
 
 **Bootstrapped the repo.**
