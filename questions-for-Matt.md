@@ -76,3 +76,20 @@ Generated during Phase 1 implementation (2026-06-20).
 **Supervisor recommendation:** Option A for now (you have few project repos), with Option C as the Phase 4 upgrade when the system is stable.
 
 **Decision needed from you:** How many project repos do you currently use agents on? If it's more than 2–3, Option B or C becomes worth the setup cost now.
+
+---
+
+## 8. Indexer purge behavior when a session folder is deleted — **[NEEDS YOUR INPUT]**
+
+**Issue:** `tools/index.py` now purges DB rows for any session whose folder no longer exists on disk. This was a real bug: the adversarial subagent created and then deleted a test folder (`TASK-TEST-NO-META`), leaving a stale row in the DB that caused the idempotency assertion to fail. The fix was applied.
+
+**However, there is a design question:** should deleted session folders be purged from the index silently, or should their rows be preserved as a "tombstone" so you know a session once existed? The current fix purges them and prints `[purged] <session_id> (folder no longer exists)` during indexing.
+
+**Options:**
+- A) Current behavior: purge stale sessions from the index when the folder is deleted. Clean index, no history of deleted sessions.
+- B) Keep stale rows but mark them `status = deleted` in `session_meta`. Lets you see that a session was once captured and then removed.
+- C) Refuse to delete and error: print a warning when a DB row has no matching folder, requiring manual cleanup.
+
+**Supervisor recommendation:** Option A is correct for test/scratch sessions. Option B is worth considering if you ever intentionally delete a real session folder (e.g., to remove sensitive content), since you'd want a record that it existed.
+
+**Decision needed from you:** Are you likely to intentionally delete committed session folders? If no, Option A is fine as-is.

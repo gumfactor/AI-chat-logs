@@ -8,7 +8,7 @@ Python scripts for indexing and searching session transcripts. No third-party pa
 
 Walks the `sessions/` directory recursively and upserts every `.md` file it finds into a SQLite FTS5 database at `index/sessions.db`. Metadata (session ID, date, agent, model, repo, status, platform URL) is read from each session's `metadata.yaml`.
 
-**Prerequisites:** Python 3.6+. No pip installs needed.
+**Prerequisites:** Python 3.7+. No pip installs needed.
 
 **Usage:**
 
@@ -24,7 +24,7 @@ python tools/index.py
 Done. 1 session(s), 2 file(s) indexed into /path/to/AI-chat-logs/index/sessions.db
 ```
 
-**Re-running is safe.** The indexer deletes existing rows for each session before re-inserting, so running it multiple times produces no duplicates. Run it after every new session commit.
+**Re-running is safe.** The indexer upserts session rows on each run, so running it multiple times produces no duplicates. It also purges rows for any session folders that have been deleted from disk, printing `[purged] TASK-ID` for each one removed. Run it after every new session commit.
 
 ---
 
@@ -32,7 +32,7 @@ Done. 1 session(s), 2 file(s) indexed into /path/to/AI-chat-logs/index/sessions.
 
 Queries the FTS5 full-text index and prints matching sessions with context snippets.
 
-**Prerequisites:** Python 3.6+. No pip installs needed. Run `index.py` first.
+**Prerequisites:** Python 3.7+. No pip installs needed. Run `index.py` first.
 
 **Usage:**
 
@@ -50,15 +50,22 @@ python tools/search.py --help
 **Sample output:**
 
 ```
-Search results for: "audit"
-============================
+Search results for: "audit"  [session: TASK-20260620-0001]
+==========================================================
 
 [1] TASK-20260620-0001
     Date     : 2026-06-20
     Agent    : chatgpt
     Repo     : gumfactor/AI-chat-logs
+    File     : summary.md
+    Context  : ...1. **A private >>>audit<<< repo** (`AI-chat-logs`) holds all conversation transcripts as version-controlled...
+
+[2] TASK-20260620-0001
+    Date     : 2026-06-20
+    Agent    : chatgpt
+    Repo     : gumfactor/AI-chat-logs
     File     : transcript.md
-    Context  : ...>>>audit<<<ability and replicability...
+    Context  : ...This makes every merged PR a navigable >>>audit<<< record.
 ```
 
 **If the index does not exist**, the script prints a helpful error:

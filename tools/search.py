@@ -54,6 +54,10 @@ def parse_args(argv):
         sys.exit(1)
 
     query = " ".join(remaining)
+    if not query.strip():
+        print("Error: No query provided.", file=sys.stderr)
+        print('Usage: python tools/search.py "query terms"', file=sys.stderr)
+        sys.exit(1)
     return query, session_filter
 
 

@@ -234,6 +234,7 @@ def main():
 
     total_sessions = 0
     total_files = 0
+    live_session_ids = set()
 
     for folder_path, md_files in find_session_folders(SESSIONS_DIR):
         yaml_path = os.path.join(folder_path, "metadata.yaml")
@@ -256,6 +257,26 @@ def main():
         print(f"[indexed] {meta['session_id']} ({file_count} file{'s' if file_count != 1 else ''})")
         total_sessions += 1
         total_files += file_count
+        live_session_ids.add(meta["session_id"])
+
+    # Remove DB rows for sessions that no longer exist on disk
+    if live_session_ids:
+        stale_ids = [
+            row[0]
+            for row in conn.execute("SELECT session_id FROM session_meta").fetchall()
+            if row[0] not in live_session_ids
+        ]
+        if stale_ids:
+            placeholders = ",".join("?" * len(stale_ids))
+            conn.execute(
+                f"DELETE FROM transcripts WHERE session_id IN ({placeholders})", stale_ids
+            )
+            conn.execute(
+                f"DELETE FROM session_meta WHERE session_id IN ({placeholders})", stale_ids
+            )
+            conn.commit()
+            for sid in stale_ids:
+                print(f"[purged] {sid} (folder no longer exists)")
 
     conn.close()
 
