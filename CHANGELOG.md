@@ -4,6 +4,18 @@ Tracks structural changes to this system: folder conventions, metadata schema up
 
 ---
 
+## 2026-06-20 — Hook-based session initialization
+
+- Added `tools/session_init.py` — hook script called by Claude Code (`UserPromptSubmit`) and Codex (`session_start`) at session start; assigns next `TASK-YYYYMMDD-NNNN`, creates `sessions/.../TASK-ID/metadata.yaml` stub, outputs `{"additionalSystemPrompt": "..."}` to inject Task ID into agent context. Idempotent via temp-file state lock in `/tmp/ai-chat-logs-sessions/`. Flags: `--agent`, `--model`, `--dry-run`.
+- Added `docs/hooks-setup.md` — step-by-step hook configuration for Claude Code (`~/.claude/settings.json`) and Codex (`~/.codex/config.toml`), including VS Code/Cursor/Windsurf extension. Covers: verification steps, `--dry-run` testing, Codex injection caveat, troubleshooting.
+- Updated `templates/metadata.yaml` — added `platform_session_id` field (platform's native UUID/thread ID, captured automatically by hook).
+- Updated `tools/capture.py` — added `--task-id` flag; when given and session folder already exists (hook-initialized), writes only `transcript.md` and `summary.md` and preserves the hook-written `metadata.yaml`.
+- Updated `AGENTS.md §1` — task ID is now injected by hook on normal path; fallback instructions for sessions without a hook.
+- Updated `MANUAL.md` — rewritten "Starting a session" section reflects hook-first workflow; updated capture section with `--task-id` usage.
+- Updated `tools/README.md` — added `session_init.py` section; updated `capture.py` section with `--task-id` option.
+
+**Schema change:** `metadata.yaml` now has a `platform_session_id` field between `session_id` and `platform_url`. Existing sessions are unaffected (the field is optional in practice).
+
 ## 2026-06-20 — Phase 5: DAG visualization
 
 - Added `tools/dag.py` — Mermaid DAG generator; reads all `metadata.yaml` files in `sessions/`; builds parent/child graph using `subagent_sessions` (primary) and `parent_session` (fallback); renders `graph TD` Mermaid diagram. Flags: `--root SESSION-ID` (subtree scope), `--output FILE` (write to file), `--append-to FILE` (append to existing file). Node labels: `"SESSION-ID (agent)"` with ` [orchestrator]` suffix when `orchestrator: true`. Abandoned sessions styled grey. Circular reference detection with warning; handles fully-circular graphs (no root nodes) by falling back to per-node DFS. Silently skips session folders missing `metadata.yaml`. Prints "no relationships" message when all sessions are independent.

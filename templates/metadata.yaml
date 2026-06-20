@@ -1,8 +1,9 @@
-session_id:           # TASK-YYYYMMDD-NNNN — assign BEFORE starting the session
-platform_url:         # optional — https://claude.ai/chat/<uuid> or https://chatgpt.com/c/<uuid>
-                      # URLs frequently don't resolve long-term; session_id is the durable reference
-timestamp_start:      # ISO 8601 (e.g. 2026-06-20T15:30:00Z) — null if unknown
-timestamp_end:        # ISO 8601 — null if unknown
+session_id:             # TASK-YYYYMMDD-NNNN — injected by hook or assigned manually
+platform_session_id:    # platform's native UUID/thread ID (captured automatically by hook)
+platform_url:           # optional — https://claude.ai/code/session_<id> or similar
+                        # best-effort constructed by hook; URLs may not resolve long-term
+timestamp_start:        # ISO 8601 (e.g. 2026-06-20T15:30:00Z) — captured by hook at session open
+timestamp_end:          # ISO 8601 — fill in when session ends
 repo:                 # org/repo-name
 branch:               # agent/TASK-ID-short-description
 parent_session:       # TASK-ID of the orchestrator that spawned this session, or null

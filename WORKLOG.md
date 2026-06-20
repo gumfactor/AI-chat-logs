@@ -4,6 +4,20 @@ Running log of work done on this system. Most recent entry first.
 
 ---
 
+## 2026-06-20 — Hook-based session initialization
+
+Implemented automatic Task ID assignment via platform hooks, eliminating the requirement to manually assign and communicate a Task ID before each session.
+
+Design decision: keep custom `TASK-YYYYMMDD-NNNN` IDs (human-readable, sequential, cross-platform) and additionally capture the platform's native session UUID in `platform_session_id`. The platform URL goes in `platform_url` as before.
+
+- Created `tools/session_init.py` — hook script; assigns next Task ID, writes metadata stub, injects ID into agent context via stdout JSON. Handles: missing payload, idempotency (temp-file lock per platform session ID), model inference from payload or env vars, platform URL construction for known Claude Code session ID formats. Exit codes: 0 always (no-op on failure to avoid blocking the agent).
+- Created `docs/hooks-setup.md` — complete setup guide for Claude Code and Codex (CLI and IDE extension). Covers configuration, verification, fallback if injection doesn't work, and troubleshooting.
+- Updated `templates/metadata.yaml` — added `platform_session_id` field.
+- Updated `tools/capture.py` — added `--task-id` flag; when session folder pre-exists (hook already ran), preserves hook-written `metadata.yaml` instead of overwriting it.
+- Updated `AGENTS.md`, `MANUAL.md`, `tools/README.md`, `README.md` — all reflect hook-first workflow with manual fallback.
+
+---
+
 ## 2026-06-20 — Smoke test: all phases
 
 End-to-end smoke test run across all five phases. All 11 steps passed on first attempt:

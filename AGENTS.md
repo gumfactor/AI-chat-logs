@@ -6,7 +6,7 @@ This file governs how any AI agent (Claude, Codex, Gemini, or other) should beha
 
 ## 1. Task ID Convention
 
-Every agent task must have a unique ID assigned **before work begins**:
+Every agent task has a unique ID:
 
 ```
 TASK-YYYYMMDD-NNNN
@@ -14,7 +14,13 @@ TASK-YYYYMMDD-NNNN
 
 Examples: `TASK-20260620-0001`, `TASK-20260621-0003`
 
-The NNNN counter resets per day and increments monotonically. If two tasks start on the same day, they get sequential numbers. The human assigns the ID before starting the session.
+The NNNN counter resets per day and increments monotonically.
+
+**How the Task ID is assigned:**
+
+- **Normal path (hook installed):** The `session_init.py` hook fires when the human presses Enter on their first message. The hook assigns the next available Task ID, writes a `metadata.yaml` stub, and injects the Task ID into your system context before you respond. You will see it in your initial context — use it from your first commit onward.
+
+- **Fallback (no hook, or injection failed):** Check the session folder at `sessions/YYYY/YYYY-MM-DD/` — if a stub exists for today's session, that Task ID is yours. If nothing exists, ask the human for a Task ID before doing any work.
 
 **The Task ID must appear in:**
 - The transcript folder name (`sessions/YYYY/YYYY-MM-DD/TASK-ID/`)
@@ -23,8 +29,6 @@ The NNNN counter resets per day and increments monotonically. If two tasks start
 - The PR title and body
 - The `metadata.yaml` for the session
 - The GitHub issue title/body (if an issue exists)
-
-No task ID = no agent work. If you were not given a Task ID, ask for one before proceeding.
 
 ---
 

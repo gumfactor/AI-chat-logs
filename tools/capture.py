@@ -14,6 +14,9 @@ Usage:
         --repo gumfactor/my-project \\
         --platform-url "https://claude.ai/chat/abc-123"
 
+    # Use a hook-assigned Task ID (hook already created the metadata stub)
+    python tools/capture.py --task-id TASK-20260620-0003 --file transcript.txt
+
     # Auto-run the indexer after capture
     python tools/capture.py --file transcript.txt --index
 """
@@ -245,6 +248,7 @@ Examples:
   python tools/capture.py --file /path/to/transcript.txt
   python tools/capture.py --agent claude --model claude-sonnet-4-6 --repo gumfactor/proj
   echo "my transcript" | python tools/capture.py --agent claude
+  python tools/capture.py --task-id TASK-20260620-0003 --file transcript.txt
   python tools/capture.py --file transcript.txt --index
 """,
     )
@@ -272,6 +276,17 @@ Examples:
         "--platform-url",
         metavar="URL",
         help="Canonical URL of the original chat (e.g. https://claude.ai/chat/abc-123).",
+    )
+    parser.add_argument(
+        "--task-id",
+        metavar="TASK-ID",
+        help=(
+            "Use this Task ID instead of generating a new one. "
+            "Pass the ID that was injected by the session_init hook. "
+            "If the session folder already exists (created by the hook), "
+            "transcript.md and summary.md are written into it without "
+            "overwriting the existing metadata.yaml."
+        ),
     )
     parser.add_argument(
         "--index",
@@ -319,13 +334,26 @@ Examples:
     date_str = today_str()
     year = today_year()
 
-    task_id = next_task_id(date_compact)
-
-    date_dir = os.path.join(SESSIONS_DIR, year, date_str)
-    session_folder = os.path.join(date_dir, task_id)
-
-    # Collision guard (should not trigger in solo use)
-    task_id, session_folder = ensure_unique_task_id(task_id, session_folder)
+    # --task-id: use the hook-assigned ID when the session was hook-initialized.
+    hook_initialized = False
+    if args.task_id:
+        task_id = args.task_id.strip()
+        # Derive the date from the ID (TASK-YYYYMMDD-NNNN) so we place the
+        # folder in the right date directory even if today != session date.
+        m = re.match(r"^TASK-(\d{4})(\d{2})(\d{2})-\d{4}$", task_id)
+        if m:
+            year = m.group(1)
+            date_str = f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
+        date_dir = os.path.join(SESSIONS_DIR, year, date_str)
+        session_folder = os.path.join(date_dir, task_id)
+        if os.path.isdir(session_folder):
+            hook_initialized = True  # hook already created the folder; don't overwrite metadata
+    else:
+        task_id = next_task_id(date_compact)
+        date_dir = os.path.join(SESSIONS_DIR, year, date_str)
+        session_folder = os.path.join(date_dir, task_id)
+        # Collision guard (should not trigger in solo use)
+        task_id, session_folder = ensure_unique_task_id(task_id, session_folder)
 
     # ------------------------------------------------------------------
     # 4. Create folder structure
@@ -346,17 +374,36 @@ Examples:
         content=raw_content,
     )
 
-    write_metadata(
-        folder=session_folder,
-        task_id=task_id,
-        agent=args.agent or "",
-        model=args.model or "",
-        date=date_str,
-        repo=args.repo or "",
-        platform_url=args.platform_url or "",
-    )
+    if hook_initialized:
+        # metadata.yaml was written by session_init.py at session start;
+        # preserve the hook-captured fields (platform_session_id, timestamp_start).
+        # Only write a fresh metadata.yaml if one doesn't exist yet.
+        meta_path = os.path.join(session_folder, "metadata.yaml")
+        if not os.path.exists(meta_path):
+            write_metadata(
+                folder=session_folder,
+                task_id=task_id,
+                agent=args.agent or "",
+                model=args.model or "",
+                date=date_str,
+                repo=args.repo or "",
+                platform_url=args.platform_url or "",
+            )
+    else:
+        write_metadata(
+            folder=session_folder,
+            task_id=task_id,
+            agent=args.agent or "",
+            model=args.model or "",
+            date=date_str,
+            repo=args.repo or "",
+            platform_url=args.platform_url or "",
+        )
 
-    write_summary(folder=session_folder, task_id=task_id)
+    # Only create a blank summary.md if one doesn't exist yet.
+    summary_path = os.path.join(session_folder, "summary.md")
+    if not os.path.exists(summary_path):
+        write_summary(folder=session_folder, task_id=task_id)
 
     # ------------------------------------------------------------------
     # 6. Report
@@ -364,16 +411,22 @@ Examples:
     print(f"Session captured successfully.")
     print(f"  Task ID : {task_id}")
     print(f"  Folder  : {session_folder}")
+    if hook_initialized:
+        print(f"  Note    : Hook-created metadata.yaml preserved (platform_session_id and")
+        print(f"            timestamp_start already captured at session start).")
     print()
 
-    if not args.platform_url:
+    if not args.platform_url and not hook_initialized:
         print("  Note: --platform-url was not provided. Update metadata.yaml with the")
         print("        original chat URL when available.")
         print()
 
-    print(f"  Files created:")
+    print(f"  Files written:")
     print(f"    {os.path.join(session_folder, 'transcript.md')}")
-    print(f"    {os.path.join(session_folder, 'metadata.yaml')}")
+    if not hook_initialized:
+        print(f"    {os.path.join(session_folder, 'metadata.yaml')}")
+    else:
+        print(f"    {os.path.join(session_folder, 'metadata.yaml')}  (pre-existing, not overwritten)")
     print(f"    {os.path.join(session_folder, 'summary.md')}")
 
     # ------------------------------------------------------------------

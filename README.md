@@ -21,7 +21,8 @@ Chat logs are the laboratory notebook of AI-assisted development. Code is the fi
 | `sessions/` | Captured agent transcripts (once Phase 1 is underway) |
 | `templates/` | Blank session and metadata templates |
 | `tools/` | Indexer and search scripts (Phase 3) |
-| `docs/` | Setup guides and reference documentation |
+| `docs/hooks-setup.md` | How to wire the session-init hook into Claude Code and Codex |
+| `docs/` | All other setup guides and reference documentation |
 | `.github/PULL_REQUEST_TEMPLATE.md` | Default PR body for all PRs opened in this repo |
 
 ## Quick Reference

@@ -4,6 +4,45 @@ Python scripts for indexing and searching session transcripts. No third-party pa
 
 ---
 
+## `session_init.py` — Session initialization hook
+
+Called by the Claude Code `UserPromptSubmit` hook (or the Codex `session_start` hook) at the start of every new chat. On first invocation for a given platform session:
+
+1. Assigns the next `TASK-YYYYMMDD-NNNN` for today
+2. Creates `sessions/YYYY/YYYY-MM-DD/TASK-ID/metadata.yaml` with a stub containing platform session ID, start timestamp, and model
+3. Outputs JSON to inject the Task ID into the agent's system context
+
+Subsequent calls within the same session (Claude Code fires `UserPromptSubmit` on every prompt) are silently ignored via a temp-file state lock in `/tmp/ai-chat-logs-sessions/`.
+
+**Prerequisites:** Python 3.7+. No pip installs needed.
+
+**Usage (via hook config — not called directly):**
+
+```bash
+# Installed in ~/.claude/settings.json or ~/.codex/config.toml
+python3 /path/to/AI-chat-logs/tools/session_init.py --agent claude
+python3 /path/to/AI-chat-logs/tools/session_init.py --agent codex --model o4-mini
+```
+
+**Manual test (dry run):**
+
+```bash
+echo '{"session_id": "test-abc-123"}' | \
+  python3 tools/session_init.py --agent claude --dry-run
+```
+
+**Options:**
+
+| Flag | Description |
+|---|---|
+| `--agent NAME` | Agent name to record: `claude`, `codex`, etc. |
+| `--model MODEL` | Model override. Inferred from payload or environment when omitted. |
+| `--dry-run` | Print what would happen; write nothing. |
+
+**Setup guide:** See `docs/hooks-setup.md` for Claude Code and Codex configuration.
+
+---
+
 ## `index.py` — Build the search index
 
 Walks the `sessions/` directory recursively and upserts every `.md` file it finds into a SQLite FTS5 database at `index/sessions.db`. Metadata (session ID, date, agent, model, repo, status, platform URL) is read from each session's `metadata.yaml`.
@@ -94,12 +133,20 @@ A git post-commit hook or a simple cron job can automate this. See Phase 4 of `P
 
 Creates the full session folder structure from a raw transcript (file or stdin). Automatically assigns the next available Task ID for today, writes `transcript.md`, `metadata.yaml`, and a blank `summary.md`.
 
+When used after a hook-initialized session, pass `--task-id` so `capture.py` uses the hook-assigned ID and does not overwrite the hook-written `metadata.yaml`.
+
 **Prerequisites:** Python 3.7+. No pip installs needed.
 
 **Usage:**
 
 ```bash
-# From a file
+# After a hook-initialized session (Task ID was injected at session start)
+python tools/capture.py \
+    --task-id TASK-20260620-0003 \
+    --file /path/to/transcript.txt \
+    --repo gumfactor/my-project
+
+# From a file (no hook — auto-assigns a new Task ID)
 python tools/capture.py --file /path/to/transcript.txt
 
 # From stdin — pipe text directly
@@ -124,6 +171,7 @@ python tools/capture.py --file transcript.txt --index
 
 | Flag | Description |
 |---|---|
+| `--task-id TASK-ID` | Use this Task ID instead of generating a new one. Pass the ID injected by the hook. If the session folder already exists, `metadata.yaml` is preserved (not overwritten). |
 | `--file PATH` | Read transcript from a file. If omitted, reads from stdin. |
 | `--agent NAME` | Agent name: `claude`, `codex`, `gemini`, `chatgpt`, etc. |
 | `--model MODEL` | Model string: `claude-sonnet-4-6`, `o4-mini`, etc. |

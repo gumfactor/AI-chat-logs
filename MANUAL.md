@@ -10,23 +10,57 @@ Before starting an AI agent session, assign it a Task ID. After the session, cap
 
 ---
 
+## One-time hook setup
+
+Install the session-init hook once and Task IDs are assigned automatically every time you start a chat. See **`docs/hooks-setup.md`** for step-by-step configuration for Claude Code and Codex (CLI and VS Code / Cursor / Windsurf extension).
+
+Without the hook, assign the Task ID manually (see Fallback below).
+
+---
+
 ## Starting a session
 
-1. **Assign a Task ID** before opening the chat:
+### With the hook installed (normal path)
+
+1. **Open the chat** in Claude Code or Codex — that's it.
+2. The hook fires the moment you press Enter on your first message.
+3. The hook assigns the next `TASK-YYYYMMDD-NNNN`, writes a `metadata.yaml` stub, and injects the Task ID into the agent's context before it responds.
+4. The agent will know its Task ID and use it in branch names and commit messages automatically.
+
+### Fallback (no hook, or hook failed)
+
+1. Check `sessions/YYYY/YYYY-MM-DD/` for a stub folder from today — the Task ID is the folder name.
+2. If none exists, assign one manually:
    ```
    TASK-YYYYMMDD-NNNN
    ```
-   Example: `TASK-20260621-0001`. The NNNN counter starts at 0001 each day.
-
-2. **Tell the agent the Task ID** at the start of the session so it uses it in branch names and commit messages.
-
-3. **Open the chat** in Claude, Codex, or whichever platform you're using.
+   Example: `TASK-20260621-0001`. NNNN starts at 0001 each day.
+3. Tell the agent the Task ID in your first message.
 
 ---
 
 ## Capturing a session after it ends
 
-Copy the transcript to a file, then run:
+### When the hook was active (normal path)
+
+The hook already created the session folder and `metadata.yaml` stub. Pass `--task-id` so `capture.py` uses the same Task ID and does not overwrite the hook-written metadata:
+
+```bash
+python tools/capture.py \
+  --task-id TASK-20260620-0003 \
+  --file /path/to/transcript.txt \
+  --repo gumfactor/my-project
+```
+
+Or from stdin (e.g. paste from clipboard):
+
+```bash
+pbpaste | python tools/capture.py --task-id TASK-20260620-0003 --repo gumfactor/my-project
+```
+
+The Task ID is printed in the agent's first response (injected by the hook), and it's also the folder name under today's date in `sessions/`.
+
+### When no hook was active (fallback)
 
 ```bash
 python tools/capture.py \
@@ -37,20 +71,12 @@ python tools/capture.py \
   --platform-url "https://claude.ai/chat/abc-123"
 ```
 
-Or pipe from stdin:
+The script auto-assigns the next available Task ID for today.
+
+### To also update the search index immediately:
 
 ```bash
-pbpaste | python tools/capture.py --agent claude --model claude-sonnet-4-6
-```
-
-The script:
-- Auto-assigns the next available Task ID for today (or use `--task-id` to override)
-- Creates `sessions/YYYY/YYYY-MM-DD/TASK-ID/` with `transcript.md`, `metadata.yaml`, and a blank `summary.md`
-- Prints the folder path so you know where to find it
-
-To also update the search index immediately:
-```bash
-python tools/capture.py --file transcript.txt --agent claude --index
+python tools/capture.py --task-id TASK-20260620-0003 --file transcript.txt --index
 ```
 
 ---
@@ -192,7 +218,9 @@ To restore, recreate the session folder and re-run `python tools/index.py`.
 
 | Task | Command |
 |---|---|
-| Capture a session | `python tools/capture.py --file transcript.txt --agent claude` |
+| Hook setup (one-time) | See `docs/hooks-setup.md` |
+| Capture (hook was active) | `python tools/capture.py --task-id TASK-ID --file transcript.txt` |
+| Capture (no hook) | `python tools/capture.py --file transcript.txt --agent claude` |
 | Update index | `python tools/index.py` |
 | Search | `python tools/search.py "query"` |
 | Session-scoped search | `python tools/search.py "query" --session TASK-ID` |
