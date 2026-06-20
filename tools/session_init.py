@@ -170,26 +170,14 @@ def yaml_str(val, fallback="null") -> str:
 
 def build_platform_url(agent: str, platform_session_id: str) -> str:
     """
-    Attempt to construct the canonical chat URL from the platform session ID.
-    Returns empty string when the URL format is unknown.
+    The session_id in the Claude Code hook payload is an internal UUID
+    (e.g. 00893aaf-19fa-41d2-8238-13269b9b3ca0) — it does NOT match the
+    URL-facing session token (e.g. session_01HFdZEuQc2ckiY9GbSyqb6m).
+    We cannot reliably reconstruct the platform URL from the hook payload.
 
-    Claude Code remote sessions:  https://claude.ai/code/session_<id>
-    Claude.ai web sessions:       https://claude.ai/chat/<uuid>
-    Codex web sessions:           format not yet documented
-
-    This is a best-effort heuristic. The user should verify and update
-    metadata.yaml if the URL is incorrect.
+    Leave platform_url blank; fill it in manually from the browser address bar
+    after the session ends, then update metadata.yaml.
     """
-    if not platform_session_id:
-        return ""
-    if agent == "claude":
-        # Remote session IDs typically start with "session_"
-        if platform_session_id.startswith("session_"):
-            return f"https://claude.ai/code/{platform_session_id}"
-        # Short UUID-style: likely a Claude.ai web chat
-        if re.match(r"^[0-9a-f]{8}-", platform_session_id):
-            return f"https://claude.ai/chat/{platform_session_id}"
-    # Codex or unknown: don't guess
     return ""
 
 
@@ -208,7 +196,7 @@ def write_metadata_stub(
     content = f"""\
 session_id: {task_id}
 platform_session_id: {yaml_str(platform_session_id)}
-platform_url: {yaml_str(platform_url)}         # verify and update if incorrect
+platform_url: null                               # fill in from browser address bar after session ends
 timestamp_start: "{timestamp_start}"
 timestamp_end: null
 repo: null                                       # fill in: org/repo-name

@@ -114,7 +114,23 @@ touch ~/.codex/config.toml
 
 ```toml
 [[hooks.SessionStart]]
-matcher = "*"
+matcher = "startup"
+
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = ["python3", "/ABSOLUTE/PATH/TO/AI-chat-logs/tools/session_init.py", "--agent", "codex"]
+statusMessage = "Initializing session..."
+
+[[hooks.SessionStart]]
+matcher = "resume"
+
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = ["python3", "/ABSOLUTE/PATH/TO/AI-chat-logs/tools/session_init.py", "--agent", "codex"]
+statusMessage = "Initializing session..."
+
+[[hooks.SessionStart]]
+matcher = "clear"
 
 [[hooks.SessionStart.hooks]]
 type = "command"
@@ -122,21 +138,23 @@ command = ["python3", "/ABSOLUTE/PATH/TO/AI-chat-logs/tools/session_init.py", "-
 statusMessage = "Initializing session..."
 ```
 
-Replace `/ABSOLUTE/PATH/TO/AI-chat-logs`. To pin a model:
-
-```toml
-command = ["python3", "/ABSOLUTE/PATH/TO/.../session_init.py", "--agent", "codex", "--model", "o4-mini"]
-```
+Replace `/ABSOLUTE/PATH/TO/AI-chat-logs` in all three blocks. To pin a model, append `"--model", "o4-mini"` to each `command` array.
 
 **Step 3 — Test:**
 
 Open a new Codex session and check `sessions/` as above.
 
-**Note on the `matcher` field for `SessionStart`:**
+**The `matcher` field for `SessionStart`:**
 
-Setting `matcher = "*"` fires the hook on every session start (both new and
-resumed sessions). You can restrict to new sessions only with `matcher = "startup"`.
-Use `matcher = "resume"` to run only on resumed sessions. Most users want `"*"`.
+The three valid values correspond to the `source` field in the hook payload:
+- `"startup"` — fresh session (new `codex` invocation)
+- `"resume"` — session resumed via `/resume` or `codex resume <id>`
+- `"clear"` — session reset via `/clear` (new conversation, same process; v0.120.0+)
+
+All three are configured above so a Task ID is always assigned. The script's
+idempotency lock handles the case where a session was initialized before a
+resume (if the process didn't restart and `/tmp` state is intact, the resume
+call is a no-op and returns the same Task ID).
 
 ---
 
@@ -153,8 +171,8 @@ Example stub (`metadata.yaml`):
 
 ```yaml
 session_id: TASK-20260620-0003
-platform_session_id: "session_abc123def456"
-platform_url: "https://claude.ai/code/session_abc123def456"
+platform_session_id: "00893aaf-19fa-41d2-8238-13269b9b3ca0"
+platform_url: null            # fill in from browser address bar after session
 timestamp_start: "2026-06-20T14:32:00Z"
 timestamp_end: null
 repo: null                    # fill in after session
@@ -164,6 +182,11 @@ model: "claude-sonnet-4-6"
 status: open
 # ... remaining fields at null/empty defaults
 ```
+
+Note: `platform_session_id` is the hook payload's internal `session_id` (a UUID).
+This is NOT the same token as the URL-facing session ID visible in the browser
+address bar. The `platform_url` cannot be auto-constructed from the payload;
+copy it from the browser after the session and update `metadata.yaml`.
 
 ---
 
