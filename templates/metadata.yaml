@@ -1,0 +1,17 @@
+session_id:           # TASK-YYYYMMDD-NNNN — assign BEFORE starting the session
+platform_url:         # https://claude.ai/chat/<uuid> or https://chatgpt.com/c/<uuid>
+timestamp_start:      # ISO 8601
+timestamp_end:        # ISO 8601
+repo:                 # org/repo-name
+branch:               # agent/TASK-ID-short-description
+parent_session:       # TASK-ID of orchestrator, or null
+forked_from:          # TASK-ID this session was forked from, or null
+agent:                # codex | claude | gemini | etc.
+model:                # e.g. claude-sonnet-4-6, o4-mini
+orchestrator: false   # true if this session spawned subagents
+subagent_sessions: [] # list of TASK-IDs for any subagents spawned
+files_touched: []     # list of file paths changed
+commits: []           # list of commit SHAs
+prs: []               # list of PR URLs
+issues: []            # list of issue URLs
+status:               # open | returned | repair | merged | abandoned

@@ -4,6 +4,17 @@ Tracks structural changes to this system: folder conventions, metadata schema up
 
 ---
 
+## 2026-06-20 — Phase 1: folder structure and templates
+
+- Created `sessions/2026/` directory with `.gitkeep` placeholder
+- Created `templates/` directory with `metadata.yaml`, `session.md`, and `pr-template.md`
+- Created `index/` directory (holds `sessions.db`, gitignored)
+- Created `tools/` directory with `.gitkeep` placeholder (Python scripts added in Phase 3)
+- Added `.gitignore` to exclude `index/sessions.db`
+- Created sample session `sessions/2026/2026-06-20/TASK-20260620-0001/` documenting the genesis conversation that produced this repository
+
+---
+
 ## 2026-06-20 — Initial structure
 
 - Established repo as the canonical home for system design documents
