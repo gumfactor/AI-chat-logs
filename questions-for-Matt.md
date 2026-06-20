@@ -6,7 +6,7 @@ Generated during Phase 1 implementation (2026-06-20).
 
 ---
 
-## 1. Session file naming convention: `transcript.md` vs. `session.md` — **[NEEDS YOUR INPUT]**
+## 1. Session file naming convention: `transcript.md` vs. `session.md` — **[DECIDED]**
 
 **Issue:** The `templates/session.md` template defines a unified file (transcript + summary + self-audit in one). The Plan.md describes per-agent files (`orchestrator.md`, `agent-a.md`) plus a separate `summary.md`. The sample session uses `transcript.md` + `summary.md` as separate files.
 
@@ -23,7 +23,7 @@ Generated during Phase 1 implementation (2026-06-20).
 
 ---
 
-## 3. Missing genesis session data
+## 3. Missing genesis session data — **[DECIDED]**
 
 **Issue:** For TASK-20260620-0001, the following could not be reconstructed:
 - `platform_url` — the ChatGPT conversation URL is unknown
@@ -42,7 +42,7 @@ Generated during Phase 1 implementation (2026-06-20).
 
 ---
 
-## 5. Multi-agent file layout — **[NEEDS YOUR INPUT]**
+## 5. Multi-agent file layout — **[DECIDED]**
 
 **Issue:** Plan.md specifies per-agent files inside each task folder (`orchestrator.md`, `agent-a.md`, etc.). This is not yet reflected in the templates. If you're actively running multi-agent sessions now, this should be defined before the first one is captured.
 
@@ -53,7 +53,7 @@ Generated during Phase 1 implementation (2026-06-20).
 
 ---
 
-## 6. GitHub Project board creation — **[NEEDS YOUR INPUT]**
+## 6. GitHub Project board creation — **[DECIDED]**
 
 **Issue:** Phase 2 requires a GitHub Project board with columns `Backlog → Assigned to Agent → Agent Returned → Human Review → Needs Repair → Merged → Archived`. This board **cannot be created by an agent via files** — it requires the GitHub web UI (GitHub's GraphQL API could be used via `gh api` calls, but that is not implemented here).
 
@@ -68,7 +68,7 @@ Generated during Phase 1 implementation (2026-06-20).
 
 ---
 
-## 7. PR template propagation to other project repos — **[NEEDS YOUR INPUT]**
+## 7. PR template propagation to other project repos — **[DECIDED]**
 
 **Issue:** The `.github/PULL_REQUEST_TEMPLATE.md` created in Phase 2 applies to PRs opened in `AI-chat-logs` itself. Plan.md Phase 2 item 3 says to add an `AGENTS.md` (or `CLAUDE.md`) to **each project repo** where agent work happens. Those repos are separate — the template and agent instructions need to be manually added or propagated to each one.
 
@@ -84,7 +84,7 @@ Generated during Phase 1 implementation (2026-06-20).
 
 ---
 
-## 8. Indexer purge behavior when a session folder is deleted — **[NEEDS YOUR INPUT]**
+## 8. Indexer purge behavior when a session folder is deleted — **[DECIDED]**
 
 **Issue:** `tools/index.py` now purges DB rows for any session whose folder no longer exists on disk. This was a real bug: the adversarial subagent created and then deleted a test folder (`TASK-TEST-NO-META`), leaving a stale row in the DB that caused the idempotency assertion to fail. The fix was applied.
 
@@ -102,7 +102,7 @@ Generated during Phase 1 implementation (2026-06-20).
 
 ---
 
-## 9. `capture.py` — indexer failure exit code behavior — **[NEEDS YOUR INPUT]**
+## 9. `capture.py` — indexer failure exit code behavior — **[DECIDED]**
 
 **Issue:** When `--index` is used and `tools/index.py` exits non-zero, `capture.py` prints a warning to stderr but still exits 0. The session was captured successfully, so success is arguably correct. But if you run this in a script that checks exit codes, a broken indexer will go undetected.
 
@@ -118,7 +118,7 @@ Generated during Phase 1 implementation (2026-06-20).
 
 ---
 
-## 10. DAG `--append-to` vs. `generate_summary.py` idempotency semantics — **[NEEDS YOUR INPUT]**
+## 10. DAG `--append-to` vs. `generate_summary.py` idempotency semantics — **[DECIDED]**
 
 **Issue:** `tools/dag.py --append-to FILE` is intentionally NOT idempotent — it appends the Mermaid block every time it is called. `tools/generate_summary.py` IS idempotent (checks for the `<!-- dag:generated -->` marker before appending). This split is deliberate: `dag.py` is a low-level primitive; `generate_summary.py` is the high-level workflow tool.
 
@@ -136,7 +136,7 @@ Generated during Phase 1 implementation (2026-06-20).
 
 ---
 
-## 11. DAG re-generation when session graph changes — **[NEEDS YOUR INPUT]**
+## 11. DAG re-generation when session graph changes — **[DECIDED]**
 
 **Issue:** `generate_summary.py` is idempotent — once the DAG section is written to `summary.md`, it will not update it even if new subagent sessions are added to the graph later. This means the DAG in `summary.md` can become stale if the session tree grows after the initial generation.
 

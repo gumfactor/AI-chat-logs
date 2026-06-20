@@ -73,11 +73,14 @@ Key fields to fill carefully:
 | Field | Notes |
 |---|---|
 | `session_id` | Must match the folder name exactly |
-| `platform_url` | Canonical URL of the original chat (copy from browser address bar) |
-| `timestamp_start` / `timestamp_end` | ISO 8601 with Z suffix; estimate if exact time unknown, note the uncertainty |
+| `platform_url` | Optional — copy from browser address bar if available; URLs frequently don't resolve long-term, so `session_id` is the durable reference |
+| `timestamp_start` / `timestamp_end` | ISO 8601 with Z suffix; set to `null` if unknown |
 | `agent` | Lowercase: `claude`, `codex`, `gemini`, `chatgpt`, etc. |
-| `model` | Specific model string: `claude-sonnet-4-5`, `o4-mini`, `gemini-2.0-flash`, etc. |
+| `model` | Specific model string: `claude-sonnet-4-6`, `o4-mini`, etc.; set to `null` if unknown |
 | `branch` | The branch this session's work landed on |
+| `orchestrator` | Set to `true` if this session spawned subagent sessions |
+| `subagent_sessions` | List the TASK-IDs of all subagents this session spawned |
+| `parent_session` | Set to the TASK-ID of the orchestrator that spawned this session |
 | `commits` | Add SHAs after the session ends and commits are made |
 | `prs` | Add PR URLs after PRs are opened |
 | `status` | Start as `open`; update to `returned`, `merged`, or `abandoned` as status changes |
@@ -86,7 +89,33 @@ After the session ends and the PR is merged, update `metadata.yaml` with final c
 
 ---
 
-## 5. Self-Audit Requirement
+## 5. Multi-Agent Session Layout
+
+When a session involves a supervisor/orchestrator and one or more delegates (subagents), each agent gets its own transcript file inside the same session folder:
+
+```
+sessions/YYYY/YYYY-MM-DD/TASK-ID/
+├── metadata.yaml          ← one shared metadata file for the whole task
+├── orchestrator.md        ← the supervisor's transcript
+├── agent-a.md             ← first subagent's transcript (name descriptively)
+├── agent-b.md             ← second subagent's transcript
+├── artifacts/             ← generated files, diffs, outputs
+└── summary.md             ← written by the human/orchestrator after the task closes
+```
+
+Naming convention for per-agent files: use the agent's role, not a generic letter if possible. Examples: `orchestrator.md`, `research-agent.md`, `coder-agent.md`, `reviewer-agent.md`.
+
+For single-agent sessions, use `transcript.md` as the filename.
+
+The DAG relationship between sessions is tracked via `metadata.yaml`:
+- Orchestrator sets `orchestrator: true` and lists `subagent_sessions: [TASK-ID-a, TASK-ID-b]`
+- Each subagent sets `parent_session: TASK-ID-of-orchestrator`
+
+This is what `tools/dag.py` reads to generate the Mermaid diagram.
+
+---
+
+## 6. Self-Audit Requirement
 
 Every session's `summary.md` must end with a **Self-Audit** section. The session is not complete without it. Use this exact structure:
 
@@ -113,7 +142,7 @@ Do not summarize or abbreviate the self-audit. It is the primary record of the a
 
 ---
 
-## 6. Transcript Immutability Rule
+## 7. Transcript Immutability Rule
 
 **Transcripts are never edited after the first commit.**
 
@@ -128,7 +157,7 @@ This applies only to transcript files. `metadata.yaml`, `summary.md`, and `artif
 
 ---
 
-## 7. The Human Merges; Agents Propose
+## 8. The Human Merges; Agents Propose
 
 Agents work on branches and open PRs. No agent output goes to `main` without explicit human review and merge. This rule has no exceptions.
 
@@ -136,7 +165,7 @@ If you find yourself on `main` or about to push directly to `main`, stop. Create
 
 ---
 
-## 8. What to Do When Working on This Repo
+## 9. What to Do When Working on This Repo
 
 When an agent task involves work on `AI-chat-logs` itself (as opposed to capturing a session from another repo):
 
@@ -145,12 +174,12 @@ When an agent task involves work on `AI-chat-logs` itself (as opposed to capturi
 3. Prefix every commit with `[TASK-ID]`.
 4. When done, open a PR. GitHub will auto-populate the PR body from `.github/PULL_REQUEST_TEMPLATE.md`. Do not copy from `templates/pr-template.md` manually — `templates/pr-template.md` is the canonical reference definition for documentation purposes, but GitHub's auto-population handles the actual PR body. Fill in every field in the auto-populated body.
 5. Complete the self-audit in `summary.md` before considering the task finished.
-6. If you have open questions for the human, append them to `questions-for-Matt.md` using the established format (see Section 9).
+6. If you have open questions for the human, append them to `questions-for-Matt.md` using the established format (see Section 10).
 7. **Post-merge step:** After the human merges the PR, update the session's `metadata.yaml` with the final commit hashes (in `commits:`) and the PR URL (in `prs:`), then change `status:` to `merged`. Commit that update with message `[TASK-ID] update metadata post-merge`.
 
 ---
 
-## 9. Open Questions
+## 10. Open Questions
 
 If you encounter something ambiguous or undecided, do not guess and silently proceed. Append the question to `/home/user/AI-chat-logs/questions-for-Matt.md` using this format:
 
@@ -167,3 +196,11 @@ If you encounter something ambiguous or undecided, do not guess and silently pro
 ```
 
 Then proceed with the supervisor recommendation (or the most conservative option) and note in the summary that a decision is pending.
+
+---
+
+## 11. Site-Wide Agent Instructions
+
+This `AGENTS.md` governs work **on this repo only**. Site-wide instructions that apply across all repos live in a separate `.dotfiles` repository (under `.claude/` and `.agents/` directories), which Claude Code and other agent runtimes can be configured to load automatically.
+
+If you are working in a project repo and need guidance that isn't covered by that repo's local `AGENTS.md` or `CLAUDE.md`, check whether site-wide instructions exist in the `.dotfiles` repo. When in doubt, err on the side of caution and ask.

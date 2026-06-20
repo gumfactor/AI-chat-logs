@@ -1,17 +1,18 @@
 session_id:           # TASK-YYYYMMDD-NNNN — assign BEFORE starting the session
-platform_url:         # https://claude.ai/chat/<uuid> or https://chatgpt.com/c/<uuid>
-timestamp_start:      # ISO 8601
-timestamp_end:        # ISO 8601
+platform_url:         # optional — https://claude.ai/chat/<uuid> or https://chatgpt.com/c/<uuid>
+                      # URLs frequently don't resolve long-term; session_id is the durable reference
+timestamp_start:      # ISO 8601 (e.g. 2026-06-20T15:30:00Z) — null if unknown
+timestamp_end:        # ISO 8601 — null if unknown
 repo:                 # org/repo-name
 branch:               # agent/TASK-ID-short-description
-parent_session:       # TASK-ID of orchestrator, or null
-forked_from:          # TASK-ID this session was forked from, or null
-agent:                # codex | claude | gemini | etc.
-model:                # e.g. claude-sonnet-4-6, o4-mini
-orchestrator: false   # true if this session spawned subagents
-subagent_sessions: [] # list of TASK-IDs for any subagents spawned
+parent_session:       # TASK-ID of the orchestrator that spawned this session, or null
+forked_from:          # TASK-ID this session was forked from (different from parent), or null
+agent:                # claude | codex | gemini | chatgpt | etc.
+model:                # e.g. claude-sonnet-4-6, o4-mini — null if unknown
+orchestrator: false   # true if this session spawned one or more subagent sessions
+subagent_sessions: [] # TASK-IDs of subagents spawned by this session (for DAG edges)
 files_touched: []     # list of file paths changed
-commits: []           # list of commit SHAs
-prs: []               # list of PR URLs
+commits: []           # list of commit SHAs (add after session ends)
+prs: []               # list of PR URLs (add after PRs are opened)
 issues: []            # list of issue URLs
 status:               # open | returned | repair | merged | abandoned
