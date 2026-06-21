@@ -69,7 +69,7 @@ import sys
 from datetime import datetime, timezone
 
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REPO_ROOT = os.environ.get("AI_CHAT_LOGS_ROOT") or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SESSIONS_DIR = os.path.join(REPO_ROOT, "sessions")
 
 # Temp directory for session state (persists across prompts within a session)
