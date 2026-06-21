@@ -1,0 +1,18 @@
+session_id: TASK-20260621-0001
+platform_session_id: "064618c4-5eda-5d7c-a98c-2c2cd3b9d7bf"
+platform_url: null                               # fill in from browser address bar after session ends
+timestamp_start: "2026-06-21T06:24:29Z"
+timestamp_end: null
+repo: gumfactor/ai-chat-logs
+branch: claude/workflow-skill-session-hook-xk07hj
+parent_session: null
+forked_from: null
+agent: "claude"
+model: "claude-sonnet-4-6"
+orchestrator: false
+subagent_sessions: []
+files_touched: []
+commits: []
+prs: []
+issues: []
+status: open
